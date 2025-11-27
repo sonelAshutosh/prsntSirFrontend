@@ -1,21 +1,84 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: var(--radius);
+}
+
+:root {
+  /* Material 3 Light Theme */
+  --background: #fdfcff;
+  --foreground: #1a1c1e;
+
+  --primary: #6750a4;
+  --primary-foreground: #ffffff;
+
+  --card: #f3f5f7;
+  --card-foreground: #1a1c1e;
+
+  --popover: #fdfcff;
+  --popover-foreground: #1a1c1e;
+
+  --muted: #f1f0f4;
+  --muted-foreground: #43474e;
+
+  --accent: #e7e0ec;
+  --accent-foreground: #1d192b;
+
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+
+  --border: #c4c7c5;
+  --input: #747775;
+  --ring: #6750a4;
+
+  --radius: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Material 3 Dark Theme */
+    --background: #1a1c1e;
+    --foreground: #e3e2e6;
+
+    --primary: #d0bcff;
+    --primary-foreground: #381e72;
+
+    --card: #1f2123;
+    --card-foreground: #e3e2e6;
+
+    --popover: #1a1c1e;
+    --popover-foreground: #e3e2e6;
+
+    --muted: #2a2c2f;
+    --muted-foreground: #c4c6cf;
+
+    --accent: #4a4458;
+    --accent-foreground: #e8def8;
+
+    --destructive: #ffb4ab;
+    --destructive-foreground: #690005;
+
+    --border: #444746;
+    --input: #8e918f;
+    --ring: #d0bcff;
   }
 }
 
