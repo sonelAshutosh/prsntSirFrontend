@@ -60,4 +60,75 @@ export const authAPI = {
   },
 }
 
+// User Profile Interfaces
+export interface UpdateProfileData {
+  firstName?: string
+  lastName?: string
+  email?: string
+}
+
+export interface UpdateProfilePictureData {
+  profileImage: string
+}
+
+export interface ChangePasswordData {
+  currentPassword: string
+  newPassword: string
+}
+
+export interface DeleteAccountData {
+  password: string
+}
+
+export interface UserResponse {
+  success: boolean
+  message: string
+  data?: {
+    user: {
+      id: string
+      firstName: string
+      lastName: string
+      email: string
+      role: string
+      profileImage: string | null
+      createdAt: string
+      updatedAt: string
+    }
+  }
+}
+
+// User API
+export const userAPI = {
+  getProfile: async (): Promise<UserResponse> => {
+    const response = await api.get('/user/profile')
+    return response.data
+  },
+
+  updateProfile: async (data: UpdateProfileData): Promise<UserResponse> => {
+    const response = await api.put('/user/profile', data)
+    return response.data
+  },
+
+  updateProfilePicture: async (
+    data: UpdateProfilePictureData
+  ): Promise<UserResponse> => {
+    const response = await api.put('/user/profile-picture', data)
+    return response.data
+  },
+
+  changePassword: async (
+    data: ChangePasswordData
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.put('/user/change-password', data)
+    return response.data
+  },
+
+  deleteAccount: async (
+    data: DeleteAccountData
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete('/user/account', { data })
+    return response.data
+  },
+}
+
 export default api
