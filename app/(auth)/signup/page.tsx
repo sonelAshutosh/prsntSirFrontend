@@ -85,7 +85,9 @@ function SignupPage() {
       const response = await authAPI.signup(signupData as any)
 
       if (response.success) {
-        // Store token and user data
+        // Store token in cookie (for middleware) and localStorage (for API calls)
+        const { setCookie } = await import('@/lib/cookies')
+        setCookie('token', response.data.token, 30)
         localStorage.setItem('token', response.data.token)
         localStorage.setItem('user', JSON.stringify(response.data.user))
 
