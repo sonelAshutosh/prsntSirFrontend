@@ -3,16 +3,36 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, CalendarCheck, User, Settings, PlusCircle } from 'lucide-react'
+import { Home, BookOpen, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function BottomNav() {
   const pathname = usePathname()
+  const [userRole, setUserRole] = React.useState<'TEACHER' | 'STUDENT' | null>(
+    null
+  )
+
+  React.useEffect(() => {
+    // Get user role from localStorage
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        setUserRole(user.role)
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+      }
+    }
+  }, [])
 
   // Hide bottom nav on login and signup pages
   if (pathname === '/login' || pathname === '/signup') {
     return null
   }
+
+  // Determine classes route based on user role
+  const classesRoute =
+    userRole === 'TEACHER' ? '/teacher/classrooms' : '/student/classrooms'
 
   const items = [
     {
@@ -21,24 +41,14 @@ export function BottomNav() {
       href: '/',
     },
     {
-      label: 'Attendance',
-      icon: CalendarCheck,
-      href: '/attendance',
-    },
-    {
-      label: 'Add',
-      icon: PlusCircle,
-      href: '/add', // Placeholder for an action or page
+      label: 'Classes',
+      icon: BookOpen,
+      href: classesRoute,
     },
     {
       label: 'Profile',
       icon: User,
       href: '/profile',
-    },
-    {
-      label: 'Settings',
-      icon: Settings,
-      href: '/settings',
     },
   ]
 
@@ -46,7 +56,9 @@ export function BottomNav() {
     <div className="bg-background fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low border-t border-border shadow-md md:hidden">
       <nav className="flex h-20 items-center justify-around px-2 pb-2">
         {items.map((item) => {
-          const isActive = pathname === item.href
+          const isActive =
+            pathname === item.href ||
+            pathname.startsWith(item.href.split('/').slice(0, -1).join('/'))
           return (
             <Link
               key={item.href}

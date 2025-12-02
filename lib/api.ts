@@ -131,4 +131,131 @@ export const userAPI = {
   },
 }
 
+// Student Profile Interfaces
+export interface StudentProfile {
+  id: string
+  studentId: string
+  qrCode: string
+  classesJoined: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StudentProfileResponse {
+  success: boolean
+  message?: string
+  data?: {
+    studentProfile: StudentProfile
+  }
+}
+
+// Student API
+export const studentAPI = {
+  getProfile: async (): Promise<StudentProfileResponse> => {
+    const response = await api.get('/student/profile')
+    return response.data
+  },
+
+  regenerateQR: async (): Promise<{
+    success: boolean
+    message: string
+    data?: { qrCode: string }
+  }> => {
+    const response = await api.post('/student/regenerate-qr')
+    return response.data
+  },
+
+  joinClass: async (
+    classCode: string
+  ): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      classroom: Classroom
+    }
+  }> => {
+    const response = await api.post('/student/join-class', { classCode })
+    return response.data
+  },
+
+  getMyClasses: async (): Promise<ClassroomsResponse> => {
+    const response = await api.get('/student/my-classes')
+    return response.data
+  },
+}
+
+// Classroom Interfaces
+export interface Classroom {
+  id: string
+  name: string
+  subject: string
+  code: string
+  teachers: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateClassroomData {
+  name: string
+  subject: string
+}
+
+export interface UpdateClassroomData {
+  name?: string
+  subject?: string
+}
+
+export interface ClassroomResponse {
+  success: boolean
+  message?: string
+  data?: {
+    classroom: Classroom
+  }
+}
+
+export interface ClassroomsResponse {
+  success: boolean
+  data?: {
+    classrooms: Classroom[]
+  }
+}
+
+// Classroom API
+export const classroomAPI = {
+  create: async (data: CreateClassroomData): Promise<ClassroomResponse> => {
+    const response = await api.post('/classroom/create', data)
+    return response.data
+  },
+
+  getMyClasses: async (): Promise<ClassroomsResponse> => {
+    const response = await api.get('/classroom/my-classes')
+    return response.data
+  },
+
+  getById: async (id: string): Promise<ClassroomResponse> => {
+    const response = await api.get(`/classroom/${id}`)
+    return response.data
+  },
+
+  update: async (
+    id: string,
+    data: UpdateClassroomData
+  ): Promise<ClassroomResponse> => {
+    const response = await api.put(`/classroom/${id}`, data)
+    return response.data
+  },
+
+  delete: async (
+    id: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.delete(`/classroom/${id}`)
+    return response.data
+  },
+
+  regenerateCode: async (id: string): Promise<ClassroomResponse> => {
+    const response = await api.post(`/classroom/${id}/regenerate-code`)
+    return response.data
+  },
+}
+
 export default api
