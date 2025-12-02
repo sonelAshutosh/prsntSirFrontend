@@ -91,11 +91,13 @@ export default function TeacherClassroomDetailPage() {
   }
 
   const handleCreateSession = (type: 'qr' | 'manual') => {
-    toast.info('Coming soon!', {
-      description: `${
-        type === 'qr' ? 'QR-based' : 'Manual'
-      } attendance session creation will be implemented soon.`,
-    })
+    if (type === 'manual') {
+      router.push(`/teacher/classrooms/${classroomId}/manual`)
+    } else {
+      toast.info('Coming soon!', {
+        description: 'QR-based attendance session will be implemented soon.',
+      })
+    }
   }
 
   if (isLoading) {

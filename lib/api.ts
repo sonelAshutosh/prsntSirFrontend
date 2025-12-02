@@ -258,4 +258,88 @@ export const classroomAPI = {
   },
 }
 
+// Attendance Session Interfaces
+export interface AttendanceStudent {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  profileImage?: string
+  studentId: string
+}
+
+export interface AttendanceSession {
+  id: string
+  classroomId: string
+  mode: 'MANUAL' | 'QR'
+  createdAt: string
+  endedAt?: string
+}
+
+export interface SessionStudentsResponse {
+  success: boolean
+  data?: {
+    students: AttendanceStudent[]
+    totalStudents: number
+    unmarkedCount: number
+    markedCount: number
+  }
+}
+
+export interface AttendanceSessionResponse {
+  success: boolean
+  message?: string
+  data?: {
+    session: AttendanceSession
+  }
+}
+
+export interface MarkAttendanceResponse {
+  success: boolean
+  message?: string
+  data?: {
+    record: {
+      id: string
+      studentId: string
+      status: 'PRESENT' | 'ABSENT'
+      createdAt: string
+    }
+  }
+}
+
+// Attendance API
+export const attendanceAPI = {
+  createSession: async (data: {
+    classroomId: string
+    mode?: 'MANUAL' | 'QR'
+  }): Promise<AttendanceSessionResponse> => {
+    const response = await api.post('/attendance/session/create', data)
+    return response.data
+  },
+
+  getSessionStudents: async (
+    sessionId: string
+  ): Promise<SessionStudentsResponse> => {
+    const response = await api.get(`/attendance/session/${sessionId}/students`)
+    return response.data
+  },
+
+  markAttendance: async (
+    sessionId: string,
+    studentId: string,
+    status: 'PRESENT' | 'ABSENT'
+  ): Promise<MarkAttendanceResponse> => {
+    const response = await api.post(`/attendance/session/${sessionId}/mark`, {
+      studentId,
+      status,
+    })
+    return response.data
+  },
+
+  endSession: async (sessionId: string): Promise<AttendanceSessionResponse> => {
+    const response = await api.post(`/attendance/session/${sessionId}/end`)
+    return response.data
+  },
+}
+
 export default api

@@ -30,15 +30,16 @@ export function BottomNav() {
     return null
   }
 
-  // Determine classes route based on user role
+  // Determine routes based on user role
   const classesRoute =
     userRole === 'TEACHER' ? '/teacher/classrooms' : '/student/classrooms'
+  const homeRoute = userRole === 'TEACHER' ? '/teacher' : '/student'
 
   const items = [
     {
       label: 'Home',
       icon: Home,
-      href: '/',
+      href: homeRoute,
     },
     {
       label: 'Classes',
@@ -57,8 +58,10 @@ export function BottomNav() {
       <nav className="flex h-20 items-center justify-around px-2 pb-2">
         {items.map((item) => {
           const isActive =
-            pathname === item.href ||
-            pathname.startsWith(item.href.split('/').slice(0, -1).join('/'))
+            item.href === homeRoute
+              ? pathname === item.href
+              : pathname.startsWith(item.href)
+
           return (
             <Link
               key={item.href}
@@ -69,8 +72,8 @@ export function BottomNav() {
                 className={cn(
                   'flex h-8 w-16 items-center justify-center rounded-full transition-colors duration-200',
                   isActive
-                    ? 'bg-secondary-container text-secondary-on-container'
-                    : 'text-muted-foreground group-hover:bg-surface-container-high'
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground group-hover:bg-accent'
                 )}
               >
                 <item.icon
@@ -80,7 +83,7 @@ export function BottomNav() {
               <span
                 className={cn(
                   'text-xs font-medium transition-colors duration-200',
-                  isActive ? 'text-on-surface' : 'text-muted-foreground'
+                  isActive ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
                 {item.label}
