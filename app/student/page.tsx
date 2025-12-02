@@ -3,17 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { QrCode, RefreshCw, TrendingUp, Download } from 'lucide-react'
+import { QrCode, RefreshCw, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type StudentProfile } from '@/lib/api'
 
@@ -37,18 +30,14 @@ export default function StudentPage() {
   const [isRegenerating, setIsRegenerating] = useState(false)
 
   useEffect(() => {
-    // Get user data from localStorage
     const userData = localStorage.getItem('user')
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData)
-
-        // Redirect if not a student
         if (parsedUser.role !== 'STUDENT') {
           router.push('/teacher')
           return
         }
-
         setUser(parsedUser)
         fetchStudentProfile()
       } catch (error) {
@@ -84,15 +73,11 @@ export default function StudentPage() {
         setStudentProfile((prev) =>
           prev ? { ...prev, qrCode: response.data!.qrCode } : null
         )
-        toast.success('QR code regenerated!', {
-          description: 'Your new QR code is ready.',
-        })
+        toast.success('QR code regenerated!')
       }
     } catch (error: any) {
       console.error('Error regenerating QR code:', error)
-      toast.error('Failed to regenerate QR code', {
-        description: error.response?.data?.message || 'Please try again.',
-      })
+      toast.error('Failed to regenerate QR code')
     } finally {
       setIsRegenerating(false)
     }
@@ -108,9 +93,7 @@ export default function StudentPage() {
     link.click()
     document.body.removeChild(link)
 
-    toast.success('QR code downloaded!', {
-      description: 'Your QR code has been saved.',
-    })
+    toast.success('QR code downloaded!')
   }
 
   if (isLoading) {
@@ -131,43 +114,23 @@ export default function StudentPage() {
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-16">
+      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
           <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Welcome back, {user.firstName}!
+            Welcome, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Your attendance QR code</p>
+          <p className="text-muted-foreground">Your Attendance QR Code</p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container max-w-4xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
-        {/* QR Code Card */}
-        <Card className="border-2 shadow-xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-br from-primary/10 to-accent/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <QrCode className="h-5 w-5 text-primary" />
-                  Your QR Code
-                </CardTitle>
-                <CardDescription>
-                  Scan this code to mark your attendance
-                </CardDescription>
-              </div>
-              <Badge variant="secondary" className="gap-1">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                Active
-              </Badge>
-            </div>
-          </CardHeader>
+      {/* QR Code Section */}
+      <div className="container max-w-4xl mx-auto px-4 -mt-6 relative z-10">
+        <Card className="border-2 shadow-xl">
           <CardContent className="p-8">
             {studentProfile?.qrCode ? (
               <div className="flex flex-col items-center gap-6">
+                {/* QR Code Display */}
                 <div className="relative bg-white p-6 rounded-2xl shadow-lg border-4 border-primary/20">
                   <Image
                     src={studentProfile.qrCode}
@@ -179,25 +142,25 @@ export default function StudentPage() {
                   />
                 </div>
 
-                <div className="text-center space-y-2">
+                {/* Student Info */}
+                <div className="text-center space-y-1">
                   <p className="text-lg font-semibold">
                     {user.firstName} {user.lastName}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Student ID: {studentProfile.studentId}
-                  </p>
+                  <Badge variant="secondary" className="font-mono">
+                    {studentProfile.studentId}
+                  </Badge>
                 </div>
 
-                <Separator />
-
-                <div className="flex flex-wrap gap-3 justify-center">
+                {/* Action Buttons */}
+                <div className="flex gap-3">
                   <Button
                     variant="outline"
                     className="gap-2"
                     onClick={handleDownloadQR}
                   >
                     <Download className="h-4 w-4" />
-                    Download QR
+                    Download
                   </Button>
                   <Button
                     variant="outline"
@@ -213,45 +176,20 @@ export default function StudentPage() {
                     ) : (
                       <>
                         <RefreshCw className="h-4 w-4" />
-                        Regenerate QR
+                        Regenerate
                       </>
                     )}
                   </Button>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground text-center max-w-md">
-                  <p>
-                    Present this QR code to your teacher to mark your attendance
-                    in class. Keep it safe and don&apos;t share it with others.
-                  </p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4 py-8">
                 <QrCode className="h-16 w-16 text-muted-foreground" />
                 <p className="text-muted-foreground">
-                  No QR code available. Please try refreshing the page.
+                  No QR code available. Please refresh the page.
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Stats Card */}
-        <Card className="border-2 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Attendance Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Overall Rate
-              </span>
-              <span className="text-3xl font-bold text-primary">0%</span>
-            </div>
           </CardContent>
         </Card>
       </div>
