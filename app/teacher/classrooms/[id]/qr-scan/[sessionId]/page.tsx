@@ -40,6 +40,10 @@ export default function QRScannerPage() {
   const [isInsecureContext, setIsInsecureContext] = useState(false)
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
 
+  // Cooldown tracking to prevent duplicate scans
+  const scanCooldownRef = useRef<Map<string, number>>(new Map())
+  const SCAN_COOLDOWN_MS = 3000 // 3 seconds cooldown per QR code
+
   // Check if running on insecure context (HTTP on non-localhost)
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -50,6 +54,26 @@ export default function QRScannerPage() {
       setIsInsecureContext(isHttp && isNotLocalhost)
     }
   }, [])
+
+  // Fetch already marked students when page loads
+  useEffect(() => {
+    const fetchMarkedStudents = async () => {
+      try {
+        const response = await attendanceAPI.getMarkedStudents(sessionId)
+        if (response.success && response.data.markedStudents) {
+          setScannedStudents(response.data.markedStudents)
+          console.log(
+            'Loaded marked students:',
+            response.data.markedStudents.length
+          )
+        }
+      } catch (error) {
+        console.error('Error fetching marked students:', error)
+      }
+    }
+
+    fetchMarkedStudents()
+  }, [sessionId])
 
   useEffect(() => {
     return () => {
@@ -282,10 +306,26 @@ export default function QRScannerPage() {
   const onScanSuccess = async (decodedText: string) => {
     console.log('QR Code detected:', decodedText)
 
+    // Check cooldown to prevent duplicate scans
+    const now = Date.now()
+    const lastScanTime = scanCooldownRef.current.get(decodedText)
+
+    if (lastScanTime && now - lastScanTime < SCAN_COOLDOWN_MS) {
+      console.log(
+        `Cooldown active for ${decodedText}, ignoring scan (${Math.round(
+          (SCAN_COOLDOWN_MS - (now - lastScanTime)) / 1000
+        )}s remaining)`
+      )
+      return
+    }
+
     if (isProcessing) {
       console.log('Already processing, skipping...')
       return
     }
+
+    // Add to cooldown immediately to prevent rapid re-scans
+    scanCooldownRef.current.set(decodedText, now)
 
     setIsProcessing(true)
     console.log('Processing QR code...')
@@ -318,6 +358,12 @@ export default function QRScannerPage() {
       const errorMessage =
         error.response?.data?.message || 'Failed to mark attendance'
 
+      // If error is "already marked", keep the cooldown
+      // Otherwise, remove from cooldown to allow retry
+      if (!errorMessage.toLowerCase().includes('already marked')) {
+        scanCooldownRef.current.delete(decodedText)
+      }
+
       toast.error('Scan failed', {
         description: errorMessage,
       })
@@ -325,6 +371,14 @@ export default function QRScannerPage() {
       setTimeout(() => {
         setIsProcessing(false)
         console.log('Ready for next scan')
+
+        // Clean up old cooldown entries (older than cooldown period)
+        const cleanupTime = Date.now() - SCAN_COOLDOWN_MS
+        for (const [qrCode, timestamp] of scanCooldownRef.current.entries()) {
+          if (timestamp < cleanupTime) {
+            scanCooldownRef.current.delete(qrCode)
+          }
+        }
       }, 1000)
     }
   }
@@ -434,8 +488,8 @@ export default function QRScannerPage() {
 
                 {!isScanning && (
                   <div className="flex flex-col items-center justify-center py-16 px-4 bg-muted/30 rounded-xl">
-                    <div className="h-24 w-24 rounded-full bg-blue-500/20 flex items-center justify-center mb-4">
-                      <Camera className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+                    <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                      <Camera className="h-12 w-12 text-primary" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">
                       Ready to Scan QR Codes
@@ -446,14 +500,14 @@ export default function QRScannerPage() {
                     </p>
 
                     {/* Info card */}
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md">
+                    <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 max-w-md">
                       <div className="flex items-start gap-3">
-                        <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                        <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                         <div className="text-sm space-y-1">
-                          <p className="font-medium text-blue-900 dark:text-blue-100">
+                          <p className="font-semibold">
                             Camera Permission Required
                           </p>
-                          <p className="text-blue-800/80 dark:text-blue-200/80">
+                          <p className="text-muted-foreground">
                             Your browser will ask for camera access when you
                             start scanning. Please click "Allow" to enable QR
                             code scanning.
@@ -536,7 +590,7 @@ export default function QRScannerPage() {
                     key={`${student.id}-${index}`}
                     className={`p-5 transition-all duration-500 ${
                       index === 0
-                        ? 'bg-green-500/10 animate-pulse-once'
+                        ? 'bg-muted/50 animate-pulse-once'
                         : 'hover:bg-muted/30'
                     }`}
                     style={{
@@ -549,15 +603,15 @@ export default function QRScannerPage() {
                         <div
                           className={`h-12 w-12 rounded-xl flex items-center justify-center ${
                             index === 0
-                              ? 'bg-green-500/30 animate-bounce-once'
-                              : 'bg-green-500/20'
+                              ? 'bg-primary/20 border animate-bounce-once'
+                              : 'bg-primary/20'
                           }`}
                         >
                           <CheckCircle2
                             className={`h-6 w-6 ${
                               index === 0
-                                ? 'text-green-600 dark:text-green-300'
-                                : 'text-green-600 dark:text-green-400'
+                                ? 'text-primary dark:text-primary'
+                                : 'text-primary dark:text-primary'
                             }`}
                           />
                         </div>
@@ -570,10 +624,7 @@ export default function QRScannerPage() {
                           </p>
                         </div>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
-                      >
+                      <Badge variant="secondary" className="">
                         Present
                       </Badge>
                     </div>

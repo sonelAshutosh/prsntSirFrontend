@@ -428,6 +428,25 @@ export const attendanceAPI = {
     )
     return response.data
   },
+
+  getMarkedStudents: async (
+    sessionId: string
+  ): Promise<{
+    success: boolean
+    data: {
+      markedStudents: {
+        id: string
+        name: string
+        studentId: string
+        email: string
+        scannedAt: string
+        status: string
+      }[]
+    }
+  }> => {
+    const response = await api.get(`/attendance/session/${sessionId}/marked`)
+    return response.data
+  },
 }
 
 export default api

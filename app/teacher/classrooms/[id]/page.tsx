@@ -279,38 +279,43 @@ export default function TeacherClassroomDetailPage() {
       <div className="container max-w-6xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
         {/* Active Session Banner */}
         {activeSession && (
-          <Card className="border-2 border-green-500/50 bg-green-500/10 shadow-lg">
+          <Card className="border-2 bg-linear-to-br from-primary/5 to-accent/5 dark:from-primary/10 dark:to-accent/10 shadow-lg overflow-hidden">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-6">
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="h-14 w-14 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+                  {/* QR Icon */}
+                  <div className="h-16 w-16 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
                     {activeSession.mode === 'QR' ? (
-                      <QrCode className="h-7 w-7 text-green-600 dark:text-green-400" />
+                      <QrCode className="h-8 w-8 text-primary" />
                     ) : (
-                      <ClipboardList className="h-7 w-7 text-green-600 dark:text-green-400" />
+                      <ClipboardList className="h-8 w-8 text-primary" />
                     )}
                   </div>
+
+                  {/* Session Details */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
-                        Active Session Running
-                      </h3>
                       <Badge
                         variant="secondary"
-                        className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
+                        className="bg-primary/10 text-primary border-0 font-medium px-2.5 py-0.5 text-xs"
                       >
                         {activeSession.mode}
                       </Badge>
                     </div>
-                    <p className="text-sm text-green-800/90 dark:text-green-200/90">
-                      {activeSession.topic} • Started{' '}
+                    <h3 className="text-lg font-semibold mb-0.5">
+                      {activeSession.topic}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Started{' '}
                       {new Date(activeSession.createdAt).toLocaleTimeString()}
                     </p>
                   </div>
                 </div>
+
+                {/* Resume Button */}
                 <Button
                   onClick={handleResumeSession}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="shadow-md hover:shadow-lg transition-all px-8 py-6 text-base font-semibold rounded-full"
                   size="lg"
                 >
                   Resume Session
