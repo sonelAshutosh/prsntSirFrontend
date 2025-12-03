@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import 'tailwindcss';
 @plugin "tailwindcss-animate";
 
@@ -6,6 +7,8 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -20,70 +23,180 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --radius: var(--radius);
+  --radius-sm: var(--radius-sm);
+  --radius-lg: var(--radius-lg);
 }
 
 :root {
-  /* Material 3 Light Theme */
-  --background: #fdfcff;
-  --foreground: #1a1c1e;
+  /* Sandstone Light Theme - Warm & Earthy */
+  --background: #faf8f5;
+  --foreground: #3d3226;
 
-  --primary: #6750a4;
+  --primary: #c17a4a;
   --primary-foreground: #ffffff;
 
-  --card: #f3f5f7;
-  --card-foreground: #1a1c1e;
+  --secondary: #9d7e6b;
+  --secondary-foreground: #ffffff;
 
-  --popover: #fdfcff;
-  --popover-foreground: #1a1c1e;
+  --card: #ffffff;
+  --card-foreground: #3d3226;
 
-  --muted: #f1f0f4;
-  --muted-foreground: #43474e;
+  --popover: #ffffff;
+  --popover-foreground: #3d3226;
 
-  --accent: #e7e0ec;
-  --accent-foreground: #1d192b;
+  --muted: #f5f1ec;
+  --muted-foreground: #7a6f5d;
 
-  --destructive: #ba1a1a;
+  --accent: #e8dfd5;
+  --accent-foreground: #3d3226;
+
+  --destructive: #c44536;
   --destructive-foreground: #ffffff;
 
-  --border: #c4c7c5;
-  --input: #747775;
-  --ring: #6750a4;
+  --border: #e0d5c7;
+  --input: #e0d5c7;
+  --ring: #c17a4a;
 
-  --radius: 1rem;
+  --radius: 1.25rem;
+  --radius-sm: 0.75rem;
+  --radius-lg: 1.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(61 50 38 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(61 50 38 / 0.1), 0 1px 2px -1px rgb(61 50 38 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(61 50 38 / 0.1),
+    0 2px 4px -2px rgb(61 50 38 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(61 50 38 / 0.1),
+    0 4px 6px -4px rgb(61 50 38 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(61 50 38 / 0.1),
+    0 8px 10px -6px rgb(61 50 38 / 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Material 3 Dark Theme */
-    --background: #1a1c1e;
-    --foreground: #e3e2e6;
+[data-theme='dark'] {
+  /* Sandstone Dark Theme - Warm & Cozy */
+  --background: #2a2318;
+  --foreground: #e8dfd5;
 
-    --primary: #d0bcff;
-    --primary-foreground: #381e72;
+  --primary: #d4956f;
+  --primary-foreground: #2a2318;
 
-    --card: #1f2123;
-    --card-foreground: #e3e2e6;
+  --secondary: #b39a86;
+  --secondary-foreground: #2a2318;
 
-    --popover: #1a1c1e;
-    --popover-foreground: #e3e2e6;
+  --card: #342b20;
+  --card-foreground: #e8dfd5;
 
-    --muted: #2a2c2f;
-    --muted-foreground: #c4c6cf;
+  --popover: #342b20;
+  --popover-foreground: #e8dfd5;
 
-    --accent: #4a4458;
-    --accent-foreground: #e8def8;
+  --muted: #3d3226;
+  --muted-foreground: #b5a593;
 
-    --destructive: #ffb4ab;
-    --destructive-foreground: #690005;
+  --accent: #4a3f32;
+  --accent-foreground: #e8dfd5;
 
-    --border: #444746;
-    --input: #8e918f;
-    --ring: #d0bcff;
-  }
+  --destructive: #e66b5c;
+  --destructive-foreground: #ffffff;
+
+  --border: #4a3f32;
+  --input: #4a3f32;
+  --ring: #d4956f;
+
+  /* Dark mode shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4),
+    0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4),
+    0 8px 10px -6px rgb(0 0 0 / 0.4);
+}
+
+* {
+  @apply border-border;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-background text-foreground;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  font-variation-settings: 'opsz' 32;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for interactive elements */
+button,
+a,
+[role='button'] {
+  @apply transition-all duration-200 ease-in-out;
+}
+
+/* Enhanced scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted/30;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+}
+
+/* Smooth page transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply bg-background/80 backdrop-blur-xl border border-border/50;
+}
+
+/* Elevated surface */
+.surface-elevated {
+  @apply bg-card shadow-md;
+}
+
+/* Material 3 state layers */
+.state-layer {
+  @apply relative overflow-hidden;
+}
+
+.state-layer::before {
+  content: '';
+  @apply absolute inset-0 bg-current opacity-0 transition-opacity duration-200;
+}
+
+.state-layer:hover::before {
+  @apply opacity-[0.08];
+}
+
+.state-layer:active::before {
+  @apply opacity-[0.12];
 }

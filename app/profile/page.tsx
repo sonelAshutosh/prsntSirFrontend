@@ -26,9 +26,20 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Mail, Shield, Edit, LogOut, Camera, Lock, Trash2 } from 'lucide-react'
+import {
+  Mail,
+  Shield,
+  Edit,
+  LogOut,
+  Camera,
+  Lock,
+  Trash2,
+  Sun,
+  Moon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { userAPI } from '@/lib/api'
+import { useTheme } from '@/components/theme-provider'
 
 interface UserData {
   _id?: string
@@ -44,6 +55,7 @@ interface UserData {
 
 function ProfilePage() {
   const router = useRouter()
+  const { theme, toggleTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [user, setUser] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -339,6 +351,24 @@ function ProfilePage() {
                   >
                     <Lock className="h-4 w-8" />
                     Change Password
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={toggleTheme}
+                  >
+                    {theme === 'dark' ? (
+                      <>
+                        <Sun className="h-4 w-4" />
+                        Light Mode
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="h-4 w-4" />
+                        Dark Mode
+                      </>
+                    )}
                   </Button>
                   <Button
                     variant="outline"

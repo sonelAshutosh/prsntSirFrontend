@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { QrCode, RefreshCw, Download } from 'lucide-react'
+import { QrCode, RefreshCw, Download, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type StudentProfile } from '@/lib/api'
 
@@ -112,65 +112,83 @@ export default function StudentPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background pb-24">
+    <div className="min-h-screen w-full bg-background pb-24 animate-fade-in">
       {/* Header */}
-      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-12 pb-16">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Welcome, {user.firstName}!
-          </h1>
-          <p className="text-muted-foreground">Your Attendance QR Code</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <h1 className="text-4xl font-bold tracking-tight">
+              Welcome, {user.firstName}!
+            </h1>
+          </div>
+          <p className="text-lg text-muted-foreground">
+            Your Attendance QR Code
+          </p>
         </div>
       </div>
 
       {/* QR Code Section */}
-      <div className="container max-w-4xl mx-auto px-4 -mt-6 relative z-10">
-        <Card className="border-2 shadow-xl">
-          <CardContent className="p-8">
+      <div className="container max-w-2xl mx-auto px-4 -mt-8 relative z-10">
+        <Card className="border-2 shadow-2xl backdrop-blur-sm bg-card/95">
+          <CardContent className="p-8 md:p-12">
             {studentProfile?.qrCode ? (
-              <div className="flex flex-col items-center gap-6">
+              <div className="flex flex-col items-center gap-8">
                 {/* QR Code Display */}
-                <div className="relative bg-white p-6 rounded-2xl shadow-lg border-4 border-primary/20">
-                  <Image
-                    src={studentProfile.qrCode}
-                    alt="Student QR Code"
-                    width={300}
-                    height={300}
-                    className="rounded-lg"
-                    priority
-                  />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-linear-to-br from-primary/20 to-accent/20 rounded-3xl blur-2xl" />
+                  <div className="relative bg-white p-8 rounded-3xl shadow-2xl border-4 border-primary/10">
+                    <Image
+                      src={studentProfile.qrCode}
+                      alt="Student QR Code"
+                      width={280}
+                      height={280}
+                      className="rounded-2xl"
+                      priority
+                    />
+                  </div>
                 </div>
 
                 {/* Student Info */}
-                <div className="text-center space-y-1">
-                  <p className="text-lg font-semibold">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <Badge variant="secondary" className="font-mono">
+                <div className="text-center space-y-3">
+                  <div>
+                    <p className="text-2xl font-bold mb-1">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {user.email}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className="font-mono text-base px-4 py-1.5"
+                  >
                     {studentProfile.studentId}
                   </Badge>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    className="gap-2"
+                    size="lg"
+                    className="gap-2 border-2 hover:bg-accent/50 transition-all"
                     onClick={handleDownloadQR}
                   >
                     <Download className="h-4 w-4" />
-                    Download
+                    Download QR
                   </Button>
                   <Button
                     variant="outline"
-                    className="gap-2"
+                    size="lg"
+                    className="gap-2 border-2 hover:bg-accent/50 transition-all"
                     onClick={handleRegenerateQR}
                     disabled={isRegenerating}
                   >
                     {isRegenerating ? (
                       <>
-                        <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                        <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
                         Regenerating...
                       </>
                     ) : (
@@ -181,13 +199,29 @@ export default function StudentPage() {
                     )}
                   </Button>
                 </div>
+
+                {/* Info Text */}
+                <div className="bg-muted/50 rounded-2xl p-4 w-full">
+                  <p className="text-sm text-center text-muted-foreground">
+                    <strong className="text-foreground">Tip:</strong> Show this
+                    QR code to your teacher during attendance sessions
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <QrCode className="h-16 w-16 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  No QR code available. Please refresh the page.
-                </p>
+              <div className="flex flex-col items-center gap-4 py-12">
+                <div className="h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center">
+                  <QrCode className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold mb-1">No QR Code Available</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please refresh the page or contact support
+                  </p>
+                </div>
+                <Button onClick={() => window.location.reload()}>
+                  Refresh Page
+                </Button>
               </div>
             )}
           </CardContent>

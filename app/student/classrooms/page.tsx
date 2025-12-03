@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { BookOpen, LogIn, ChevronRight } from 'lucide-react'
+import { BookOpen, LogIn, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type Classroom } from '@/lib/api'
 
@@ -122,42 +122,53 @@ export default function StudentClassroomsPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background pb-24">
+    <div className="min-h-screen w-full bg-background pb-24 animate-fade-in">
       {/* Header */}
-      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-6xl mx-auto px-4 relative">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
-              <p className="text-muted-foreground text-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="h-7 w-7 text-primary" />
+                <h1 className="text-3xl font-bold tracking-tight">
+                  My Classes
+                </h1>
+              </div>
+              <p className="text-muted-foreground">
                 Manage your enrolled classes
               </p>
             </div>
             <Button
               onClick={() => setJoinClassOpen(true)}
-              size="sm"
-              className="gap-2"
+              size="lg"
+              className="gap-2 shadow-lg hover:shadow-xl transition-all"
             >
-              <LogIn className="h-4 w-4" />
-              Join Class
+              <LogIn className="h-5 w-5" />
+              <span className="hidden sm:inline">Join Class</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container max-w-6xl mx-auto px-4 -mt-4 relative z-10">
+      <div className="container max-w-6xl mx-auto px-4 -mt-6 relative z-10">
         {classrooms.length === 0 ? (
           <Card className="border-2 shadow-xl">
             <CardContent className="text-center py-16">
-              <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
+              <div className="h-20 w-20 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No classes yet</h3>
               <p className="text-muted-foreground mb-6">
                 Join your first class to get started
               </p>
-              <Button onClick={() => setJoinClassOpen(true)} className="gap-2">
-                <LogIn className="h-4 w-4" />
+              <Button
+                onClick={() => setJoinClassOpen(true)}
+                size="lg"
+                className="gap-2"
+              >
+                <LogIn className="h-5 w-5" />
                 Join Your First Class
               </Button>
             </CardContent>
@@ -167,13 +178,16 @@ export default function StudentClassroomsPage() {
             {classrooms.map((classroom) => (
               <Card
                 key={classroom.id}
-                className="border-2 hover:shadow-lg transition-all cursor-pointer hover:border-primary/50 group"
+                className="border-2 hover:shadow-xl hover:border-primary/50 transition-all cursor-pointer group"
                 onClick={() => handleClassClick(classroom.id)}
               >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1 mb-1">
                         {classroom.name}
                       </h3>
                       <p className="text-sm text-muted-foreground line-clamp-1">
@@ -206,7 +220,7 @@ export default function StudentClassroomsPage() {
                 value={classCode}
                 onChange={(e) => setClassCode(e.target.value.toUpperCase())}
                 maxLength={6}
-                className="font-mono text-center text-lg tracking-wider"
+                className="font-mono text-center text-lg tracking-wider uppercase"
               />
             </div>
           </div>

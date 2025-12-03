@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -21,14 +15,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import {
   ArrowLeft,
   Calendar,
-  PlusCircle,
   Users,
   QrCode,
   ClipboardList,
-  ChevronRight,
+  BookOpen,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { classroomAPI, attendanceAPI } from '@/lib/api'
@@ -193,168 +189,194 @@ export default function TeacherClassroomDetailPage() {
       : 0
 
   return (
-    <div className="min-h-screen w-full bg-background pb-24">
+    <div className="min-h-screen w-full bg-background pb-24 animate-fade-in">
       {/* Header */}
-      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
-        <div className="container max-w-4xl mx-auto px-4 relative">
+        <div className="container max-w-6xl mx-auto px-4 relative">
           <Button
             variant="ghost"
             size="sm"
-            className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
+            className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/teacher/classrooms')}
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Classes
           </Button>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight mb-1">
-                {classroom.name}
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                {classroom.subject}
-              </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <BookOpen className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold tracking-tight mb-1">
+                  {classroom.name}
+                </h1>
+                <p className="text-lg text-muted-foreground mb-3">
+                  {classroom.subject}
+                </p>
+                {/* <Badge
+                  variant="secondary"
+                  className="font-mono text-sm px-3 py-1"
+                >
+                  Code: {classroom.code}
+                </Badge> */}
+              </div>
             </div>
-            <Badge variant="secondary" className="font-mono text-xs">
-              {classroom.code}
-            </Badge>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container max-w-4xl mx-auto px-4 -mt-4 relative z-10 space-y-6">
+      <div className="container max-w-6xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
         {/* Quick Actions & Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Quick Actions */}
-          <Card className="md:col-span-2 border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <PlusCircle className="h-4 w-4 text-primary" />
-                New Session
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="lg:col-span-2 border-2 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-semibold">
+                  Create Attendance Session
+                </h3>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
                   onClick={() => handleCreateSession('qr')}
                 >
-                  <QrCode className="h-6 w-6 text-primary" />
-                  <span className="font-medium">QR Code</span>
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <QrCode className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="font-semibold">QR Code</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
                   onClick={() => handleCreateSession('manual')}
                 >
-                  <ClipboardList className="h-6 w-6 text-primary" />
-                  <span className="font-medium">Manual</span>
+                  <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <ClipboardList className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <span className="font-semibold">Manual</span>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Stats */}
-          <Card className="border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Students</span>
-                <span className="text-xl font-bold">
-                  {classroom.studentCount || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Sessions</span>
-                <span className="text-xl font-bold">{totalSessions}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Avg. Attd.
-                </span>
-                <span className="text-xl font-bold text-primary">
-                  {avgAttendance}%
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <Card className="border-2 shadow-lg hover:shadow-xl transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Students</p>
+                    <p className="text-2xl font-bold">
+                      {classroom.studentCount || 0}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Sessions</p>
+                    <p className="text-2xl font-bold">{totalSessions}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground font-medium">
+                      Avg. Attendance
+                    </p>
+                    <p className="text-2xl font-bold">{avgAttendance}%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Recent Sessions */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Recent Sessions
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Class Sessions</h2>
           {sessions.length === 0 ? (
-            <Card className="border-dashed shadow-none">
-              <CardContent className="text-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">
-                  No sessions yet. Start one above!
+            <Card className="border-2 border-dashed shadow-lg">
+              <CardContent className="text-center py-16">
+                <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-1">No sessions yet</h3>
+                <p className="text-muted-foreground mb-6">
+                  Create your first attendance session above
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3">
-              {sessions.map((session) => (
-                <Card
-                  key={session.id}
-                  className="border hover:shadow-md transition-all cursor-pointer group"
-                >
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          session.type === 'QR'
-                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                            : 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
-                        }`}
-                      >
-                        {session.type === 'QR' ? (
-                          <QrCode className="h-5 w-5" />
-                        ) : (
-                          <ClipboardList className="h-5 w-5" />
-                        )}
+            <div className="space-y-3">
+              <Card className="border-2 hover:shadow-lg transition-all">
+                {sessions.map((session, index) => (
+                  <div key={session.id}>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div
+                            className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                              session.type === 'QR'
+                                ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                                : 'bg-purple-500/20 text-purple-600 dark:text-purple-400'
+                            }`}
+                          >
+                            {session.type === 'QR' ? (
+                              <QrCode className="h-6 w-6" />
+                            ) : (
+                              <ClipboardList className="h-6 w-6" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-base mb-1">
+                              {session.topic}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(session.date).toLocaleDateString(
+                                undefined,
+                                {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                }
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-primary mb-1">
+                            {Math.round(
+                              (session.presentStudents /
+                                session.totalStudents) *
+                                100
+                            )}
+                            %
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {session.presentStudents}/{session.totalStudents}{' '}
+                            present
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">
-                          {session.topic}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(session.date).toLocaleDateString(
-                            undefined,
-                            {
-                              month: 'short',
-                              day: 'numeric',
-                            }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">
-                        {Math.round(
-                          (session.presentStudents / session.totalStudents) *
-                            100
-                        )}
-                        %
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {session.presentStudents}/{session.totalStudents}{' '}
-                        Present
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                    {index < sessions.length - 1 && <Separator />}
+                  </div>
+                ))}
+              </Card>
             </div>
           )}
         </div>
