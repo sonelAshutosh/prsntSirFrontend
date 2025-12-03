@@ -167,8 +167,8 @@ export default function TeacherClassroomsPage() {
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-6xl mx-auto px-4 relative">
           <div className="flex items-center justify-between">
             <div>
@@ -183,7 +183,7 @@ export default function TeacherClassroomsPage() {
               className="gap-2"
             >
               <PlusCircle className="h-4 w-4" />
-              Create Class
+              Class
             </Button>
           </div>
         </div>

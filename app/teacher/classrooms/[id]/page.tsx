@@ -9,6 +9,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -21,7 +31,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { classroomAPI } from '@/lib/api'
+import { classroomAPI, attendanceAPI } from '@/lib/api'
 
 interface UserData {
   _id?: string
@@ -38,6 +48,7 @@ interface Classroom {
   name: string
   subject: string
   code: string
+  studentCount?: number
 }
 
 export default function TeacherClassroomDetailPage() {
@@ -48,6 +59,22 @@ export default function TeacherClassroomDetailPage() {
   const [user, setUser] = useState<UserData | null>(null)
   const [classroom, setClassroom] = useState<Classroom | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [createSessionMode, setCreateSessionMode] = useState<'QR' | 'MANUAL'>(
+    'MANUAL'
+  )
+  const [sessionTopic, setSessionTopic] = useState('')
+  const [sessions, setSessions] = useState<
+    {
+      id: string
+      date: string
+      type: 'MANUAL' | 'QR'
+      status: 'completed' | 'active'
+      totalStudents: number
+      presentStudents: number
+      topic: string
+    }[]
+  >([])
 
   useEffect(() => {
     // Get user data from localStorage
@@ -64,6 +91,7 @@ export default function TeacherClassroomDetailPage() {
 
         setUser(parsedUser)
         fetchClassroomDetails()
+        fetchSessions()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -90,12 +118,46 @@ export default function TeacherClassroomDetailPage() {
     }
   }
 
+  const fetchSessions = async () => {
+    try {
+      const response = await attendanceAPI.getClassroomSessions(classroomId)
+      if (response.success) {
+        setSessions(response.data.sessions)
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error)
+    }
+  }
+
   const handleCreateSession = (type: 'qr' | 'manual') => {
-    if (type === 'manual') {
-      router.push(`/teacher/classrooms/${classroomId}/manual`)
-    } else {
-      toast.info('Coming soon!', {
-        description: 'QR-based attendance session will be implemented soon.',
+    setCreateSessionMode(type === 'qr' ? 'QR' : 'MANUAL')
+    setSessionTopic('')
+    setIsCreateDialogOpen(true)
+  }
+
+  const submitCreateSession = async () => {
+    try {
+      const response = await attendanceAPI.createSession({
+        classroomId,
+        mode: createSessionMode,
+        topic: sessionTopic,
+      })
+      if (response.success && response.data) {
+        setIsCreateDialogOpen(false)
+        if (createSessionMode === 'MANUAL') {
+          router.push(
+            `/teacher/classrooms/${classroomId}/manual?sessionId=${response.data.session.id}`
+          )
+        } else {
+          toast.info('QR Session Created', {
+            description: 'QR code display will be implemented soon.',
+          })
+          fetchSessions()
+        }
+      }
+    } catch (error: any) {
+      toast.error('Failed to create session', {
+        description: error.response?.data?.message || 'Please try again.',
       })
     }
   }
@@ -115,248 +177,221 @@ export default function TeacherClassroomDetailPage() {
     return null
   }
 
-  // Mock attendance sessions data - will be replaced with real data later
-  const mockAttendanceSessions = [
-    {
-      id: '1',
-      date: '2025-12-02',
-      topic: 'Introduction to React',
-      type: 'qr',
-      totalStudents: 30,
-      presentStudents: 28,
-      status: 'completed',
-    },
-    {
-      id: '2',
-      date: '2025-11-30',
-      topic: 'State Management',
-      type: 'manual',
-      totalStudents: 30,
-      presentStudents: 25,
-      status: 'completed',
-    },
-    {
-      id: '3',
-      date: '2025-11-28',
-      topic: 'Component Lifecycle',
-      type: 'qr',
-      totalStudents: 30,
-      presentStudents: 29,
-      status: 'completed',
-    },
-  ]
-
-  const totalSessions = mockAttendanceSessions.length
+  const totalSessions = sessions.length
   const avgAttendance =
-    mockAttendanceSessions.length > 0
+    sessions.length > 0
       ? Math.round(
-          mockAttendanceSessions.reduce(
-            (acc, s) => acc + (s.presentStudents / s.totalStudents) * 100,
+          sessions.reduce(
+            (acc, s) =>
+              acc +
+              (s.totalStudents > 0
+                ? (s.presentStudents / s.totalStudents) * 100
+                : 0),
             0
-          ) / mockAttendanceSessions.length
+          ) / sessions.length
         )
       : 0
 
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
           <Button
             variant="ghost"
-            className="mb-4 gap-2"
+            size="sm"
+            className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/teacher/classrooms')}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Classes
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            {classroom.name}
-          </h1>
-          <p className="text-muted-foreground mb-4">{classroom.subject}</p>
-          <Badge variant="secondary" className="font-mono">
-            {classroom.code}
-          </Badge>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">
+                {classroom.name}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {classroom.subject}
+              </p>
+            </div>
+            <Badge variant="secondary" className="font-mono text-xs">
+              {classroom.code}
+            </Badge>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container max-w-4xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
-        {/* Quick Actions */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PlusCircle className="h-5 w-5 text-primary" />
-              Create Attendance Session
-            </CardTitle>
-            <CardDescription>
-              Start a new attendance session for this class
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Card
-                className="border-2 hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
-                onClick={() => handleCreateSession('qr')}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <QrCode className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1">QR Code Session</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Students scan QR to mark attendance
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="border-2 hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
-                onClick={() => handleCreateSession('manual')}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <ClipboardList className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1">Manual Session</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Mark attendance manually
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Class Statistics
-            </CardTitle>
-            <CardDescription>
-              Overview of attendance for this class
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Total Sessions
-                </p>
-                <p className="text-3xl font-bold text-primary">
-                  {totalSessions}
-                </p>
+      <div className="container max-w-4xl mx-auto px-4 -mt-4 relative z-10 space-y-6">
+        {/* Quick Actions & Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Quick Actions */}
+          <Card className="md:col-span-2 border shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <PlusCircle className="h-4 w-4 text-primary" />
+                New Session
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => handleCreateSession('qr')}
+                >
+                  <QrCode className="h-6 w-6 text-primary" />
+                  <span className="font-medium">QR Code</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => handleCreateSession('manual')}
+                >
+                  <ClipboardList className="h-6 w-6 text-primary" />
+                  <span className="font-medium">Manual</span>
+                </Button>
               </div>
-              <div className="text-center p-4 bg-primary/10 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Avg. Attendance
-                </p>
-                <p className="text-3xl font-bold text-primary">
+            </CardContent>
+          </Card>
+
+          {/* Stats */}
+          <Card className="border shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Students</span>
+                <span className="text-xl font-bold">
+                  {classroom.studentCount || 0}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Sessions</span>
+                <span className="text-xl font-bold">{totalSessions}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Avg. Attd.
+                </span>
+                <span className="text-xl font-bold text-primary">
                   {avgAttendance}%
-                </p>
+                </span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Attendance Sessions */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Attendance Sessions
-            </CardTitle>
-            <CardDescription>
-              All attendance sessions for this class
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {mockAttendanceSessions.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  No attendance sessions yet
+        {/* Recent Sessions */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Recent Sessions
+          </h2>
+          {sessions.length === 0 ? (
+            <Card className="border-dashed shadow-none">
+              <CardContent className="text-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">
+                  No sessions yet. Start one above!
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Create your first session to start tracking attendance
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {mockAttendanceSessions.map((session) => (
-                  <Card key={session.id} className="border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold">{session.topic}</h4>
-                            <Badge
-                              variant={
-                                session.type === 'qr' ? 'default' : 'secondary'
-                              }
-                            >
-                              {session.type === 'qr' ? (
-                                <>
-                                  <QrCode className="h-3 w-3 mr-1" />
-                                  QR Code
-                                </>
-                              ) : (
-                                <>
-                                  <ClipboardList className="h-3 w-3 mr-1" />
-                                  Manual
-                                </>
-                              )}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {new Date(session.date).toLocaleDateString(
-                              'en-US',
-                              {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              }
-                            )}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="text-muted-foreground">
-                              <Users className="h-4 w-4 inline mr-1" />
-                              {session.presentStudents}/{session.totalStudents}{' '}
-                              students
-                            </span>
-                            <span className="font-medium text-primary">
-                              {Math.round(
-                                (session.presentStudents /
-                                  session.totalStudents) *
-                                  100
-                              )}
-                              % attendance
-                            </span>
-                          </div>
-                        </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {sessions.map((session) => (
+                <Card
+                  key={session.id}
+                  className="border hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          session.type === 'QR'
+                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                            : 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400'
+                        }`}
+                      >
+                        {session.type === 'QR' ? (
+                          <QrCode className="h-5 w-5" />
+                        ) : (
+                          <ClipboardList className="h-5 w-5" />
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      <div>
+                        <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                          {session.topic}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(session.date).toLocaleDateString(
+                            undefined,
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-primary">
+                        {Math.round(
+                          (session.presentStudents / session.totalStudents) *
+                            100
+                        )}
+                        %
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {session.presentStudents}/{session.totalStudents}{' '}
+                        Present
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Session</DialogTitle>
+            <DialogDescription>
+              Enter a topic for this{' '}
+              {createSessionMode === 'QR' ? 'QR Code' : 'Manual'} attendance
+              session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="topic">Topic</Label>
+              <Input
+                id="topic"
+                placeholder="e.g., Introduction to React"
+                value={sessionTopic}
+                onChange={(e) => setSessionTopic(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={submitCreateSession}>Create Session</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

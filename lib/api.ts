@@ -274,11 +274,13 @@ export interface AttendanceSession {
   mode: 'MANUAL' | 'QR'
   createdAt: string
   endedAt?: string
+  topic?: string
 }
 
 export interface SessionStudentsResponse {
   success: boolean
   data?: {
+    session: AttendanceSession
     students: AttendanceStudent[]
     totalStudents: number
     unmarkedCount: number
@@ -312,6 +314,7 @@ export const attendanceAPI = {
   createSession: async (data: {
     classroomId: string
     mode?: 'MANUAL' | 'QR'
+    topic?: string
   }): Promise<AttendanceSessionResponse> => {
     const response = await api.post('/attendance/session/create', data)
     return response.data
@@ -338,6 +341,48 @@ export const attendanceAPI = {
 
   endSession: async (sessionId: string): Promise<AttendanceSessionResponse> => {
     const response = await api.post(`/attendance/session/${sessionId}/end`)
+    return response.data
+  },
+
+  getClassroomSessions: async (
+    classroomId: string
+  ): Promise<{
+    success: boolean
+    data: {
+      sessions: {
+        id: string
+        date: string
+        type: 'MANUAL' | 'QR'
+        status: 'completed' | 'active'
+        totalStudents: number
+        presentStudents: number
+        topic: string
+      }[]
+    }
+  }> => {
+    const response = await api.get(
+      `/attendance/classroom/${classroomId}/sessions`
+    )
+    return response.data
+  },
+
+  getStudentAttendanceHistory: async (
+    classroomId: string
+  ): Promise<{
+    success: boolean
+    data: {
+      history: {
+        id: string
+        date: string
+        topic: string
+        status: 'present' | 'absent'
+        markedAt: string | null
+      }[]
+    }
+  }> => {
+    const response = await api.get(
+      `/attendance/classroom/${classroomId}/student`
+    )
     return response.data
   },
 }

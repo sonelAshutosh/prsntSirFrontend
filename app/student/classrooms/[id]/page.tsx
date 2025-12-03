@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { toast } from 'sonner'
-import { classroomAPI } from '@/lib/api'
+import { classroomAPI, attendanceAPI } from '@/lib/api'
 
 interface UserData {
   _id?: string
@@ -40,6 +40,15 @@ export default function StudentClassroomDetailPage() {
   const [user, setUser] = useState<UserData | null>(null)
   const [classroom, setClassroom] = useState<Classroom | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [history, setHistory] = useState<
+    {
+      id: string
+      date: string
+      topic: string
+      status: 'present' | 'absent'
+      markedAt: string | null
+    }[]
+  >([])
 
   useEffect(() => {
     // Get user data from localStorage
@@ -56,6 +65,7 @@ export default function StudentClassroomDetailPage() {
 
         setUser(parsedUser)
         fetchClassroomDetails()
+        fetchAttendanceHistory()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -82,6 +92,19 @@ export default function StudentClassroomDetailPage() {
     }
   }
 
+  const fetchAttendanceHistory = async () => {
+    try {
+      const response = await attendanceAPI.getStudentAttendanceHistory(
+        classroomId
+      )
+      if (response.success) {
+        setHistory(response.data.history)
+      }
+    } catch (error) {
+      console.error('Error fetching attendance history:', error)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -97,168 +120,153 @@ export default function StudentClassroomDetailPage() {
     return null
   }
 
-  // Mock attendance data - will be replaced with real data later
-  const mockAttendanceSessions = [
-    {
-      id: '1',
-      date: '2025-12-02',
-      topic: 'Introduction to React',
-      status: 'present',
-      markedAt: '09:15 AM',
-    },
-    {
-      id: '2',
-      date: '2025-11-30',
-      topic: 'State Management',
-      status: 'present',
-      markedAt: '09:12 AM',
-    },
-    {
-      id: '3',
-      date: '2025-11-28',
-      topic: 'Component Lifecycle',
-      status: 'absent',
-      markedAt: null,
-    },
-  ]
-
-  const presentCount = mockAttendanceSessions.filter(
-    (s) => s.status === 'present'
-  ).length
-  const totalSessions = mockAttendanceSessions.length
+  const presentCount = history.filter((s) => s.status === 'present').length
+  const totalSessions = history.length
   const attendanceRate =
     totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
 
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-6 pb-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
           <Button
             variant="ghost"
-            className="mb-4 gap-2"
+            size="sm"
+            className="mb-2 -ml-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.push('/student/classrooms')}
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Classes
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            {classroom.name}
-          </h1>
-          <p className="text-muted-foreground mb-4">{classroom.subject}</p>
-          <Badge variant="secondary" className="font-mono">
-            {classroom.code}
-          </Badge>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight mb-1">
+                {classroom.name}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {classroom.subject}
+              </p>
+            </div>
+            <Badge variant="secondary" className="font-mono text-xs">
+              {classroom.code}
+            </Badge>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container max-w-4xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
+      <div className="container max-w-4xl mx-auto px-4 -mt-4 relative z-10 space-y-6">
         {/* Attendance Stats */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Attendance Overview
-            </CardTitle>
-            <CardDescription>
-              Your attendance statistics for this class
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Total Sessions
-                </p>
-                <p className="text-3xl font-bold text-primary">
-                  {totalSessions}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-green-500/10 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Present</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {presentCount}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-primary/10 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">
-                  Attendance Rate
-                </p>
-                <p className="text-3xl font-bold text-primary">
-                  {attendanceRate}%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-3 gap-4">
+          <Card className="border shadow-sm">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+                Total
+              </p>
+              <p className="text-2xl font-bold">{totalSessions}</p>
+            </CardContent>
+          </Card>
+          <Card className="border shadow-sm bg-green-500/5 border-green-200 dark:border-green-900">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-green-600 dark:text-green-400 mb-1 uppercase tracking-wider">
+                Present
+              </p>
+              <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                {presentCount}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="border shadow-sm bg-primary/5 border-primary/20">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-primary mb-1 uppercase tracking-wider">
+                Rate
+              </p>
+              <p className="text-2xl font-bold text-primary">
+                {attendanceRate}%
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Attendance History */}
-        <Card className="border-2 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Attendance History
-            </CardTitle>
-            <CardDescription>
-              All attendance sessions for this class
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {mockAttendanceSessions.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  No attendance sessions yet
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Attendance History
+          </h2>
+          {history.length === 0 ? (
+            <Card className="border-dashed shadow-none">
+              <CardContent className="text-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">
+                  No attendance records yet
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {mockAttendanceSessions.map((session) => (
-                  <Card key={session.id} className="border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold">{session.topic}</h4>
-                            {session.status === 'present' ? (
-                              <Badge className="bg-green-500 hover:bg-green-600">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Present
-                              </Badge>
-                            ) : (
-                              <Badge variant="destructive">
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Absent
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {history.map((session) => (
+                <Card
+                  key={session.id}
+                  className="border hover:shadow-md transition-all group"
+                >
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          session.status === 'present'
+                            ? 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                        }`}
+                      >
+                        {session.status === 'present' ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <XCircle className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                          {session.topic}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>
                             {new Date(session.date).toLocaleDateString(
-                              'en-US',
+                              undefined,
                               {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
+                                month: 'short',
                                 day: 'numeric',
                               }
                             )}
-                          </p>
+                          </span>
                           {session.markedAt && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Marked at: {session.markedAt}
-                            </p>
+                            <>
+                              <span>•</span>
+                              <span>{session.markedAt}</span>
+                            </>
                           )}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                    <Badge
+                      variant={
+                        session.status === 'present' ? 'default' : 'destructive'
+                      }
+                      className={`capitalize ${
+                        session.status === 'present'
+                          ? 'bg-green-500 hover:bg-green-600'
+                          : ''
+                      }`}
+                    >
+                      {session.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,9 +23,12 @@ export default function ManualAttendancePage() {
   const router = useRouter()
   const params = useParams()
   const classroomId = params.id as string
+  const searchParams = useSearchParams()
+  const querySessionId = searchParams.get('sessionId')
 
   const [user, setUser] = useState<UserData | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [sessionTopic, setSessionTopic] = useState<string>('')
   const [students, setStudents] = useState<AttendanceStudent[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -67,14 +70,22 @@ export default function ManualAttendancePage() {
 
   const initializeSession = async () => {
     try {
-      // Create attendance session
-      const sessionResponse = await attendanceAPI.createSession({
-        classroomId,
-        mode: 'MANUAL',
-      })
+      let newSessionId = querySessionId
 
-      if (sessionResponse.success && sessionResponse.data) {
-        const newSessionId = sessionResponse.data.session.id
+      if (!newSessionId) {
+        // Create attendance session if not provided
+        const sessionResponse = await attendanceAPI.createSession({
+          classroomId,
+          mode: 'MANUAL',
+        })
+
+        if (sessionResponse.success && sessionResponse.data) {
+          newSessionId = sessionResponse.data.session.id
+          setSessionTopic(sessionResponse.data.session.topic || '')
+        }
+      }
+
+      if (newSessionId) {
         setSessionId(newSessionId)
 
         // Get students for this session
@@ -84,6 +95,9 @@ export default function ManualAttendancePage() {
 
         if (studentsResponse.success && studentsResponse.data) {
           setStudents(studentsResponse.data.students)
+          if (studentsResponse.data.session) {
+            setSessionTopic(studentsResponse.data.session.topic || '')
+          }
           setStats({
             present: 0,
             absent: 0,
@@ -232,8 +246,8 @@ export default function ManualAttendancePage() {
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
           <Button
             variant="ghost"
@@ -243,9 +257,12 @@ export default function ManualAttendancePage() {
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight mb-4">
+          <h1 className="text-3xl font-bold tracking-tight mb-1">
             Manual Attendance
           </h1>
+          {sessionTopic && (
+            <p className="text-muted-foreground mb-4">{sessionTopic}</p>
+          )}
 
           {/* Stats */}
           <div className="flex gap-4">

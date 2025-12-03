@@ -114,8 +114,8 @@ export default function StudentPage() {
   return (
     <div className="min-h-screen w-full bg-background pb-24">
       {/* Header */}
-      <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+      <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-8 pb-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
         <div className="container max-w-4xl mx-auto px-4 relative">
           <h1 className="text-3xl font-bold tracking-tight mb-2">
             Welcome, {user.firstName}!
