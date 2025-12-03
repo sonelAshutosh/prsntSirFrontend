@@ -385,6 +385,49 @@ export const attendanceAPI = {
     )
     return response.data
   },
+
+  scanQRCode: async (
+    sessionId: string,
+    qrData: string
+  ): Promise<{
+    success: boolean
+    message: string
+    data?: {
+      student: {
+        id: string
+        name: string
+        studentId: string
+        email: string
+      }
+      record: {
+        id: string
+        status: string
+        markedAt: string
+      }
+    }
+  }> => {
+    const response = await api.post(
+      `/attendance/session/${sessionId}/scan-qr`,
+      {
+        qrData,
+      }
+    )
+    return response.data
+  },
+
+  getActiveSession: async (
+    classroomId: string
+  ): Promise<{
+    success: boolean
+    data: {
+      activeSession: AttendanceSession | null
+    }
+  }> => {
+    const response = await api.get(
+      `/attendance/classroom/${classroomId}/active-session`
+    )
+    return response.data
+  },
 }
 
 export default api

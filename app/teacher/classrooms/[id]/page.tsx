@@ -60,6 +60,12 @@ export default function TeacherClassroomDetailPage() {
     'MANUAL'
   )
   const [sessionTopic, setSessionTopic] = useState('')
+  const [activeSession, setActiveSession] = useState<{
+    id: string
+    mode: 'MANUAL' | 'QR'
+    topic: string
+    createdAt: string
+  } | null>(null)
   const [sessions, setSessions] = useState<
     {
       id: string
@@ -88,6 +94,7 @@ export default function TeacherClassroomDetailPage() {
         setUser(parsedUser)
         fetchClassroomDetails()
         fetchSessions()
+        fetchActiveSession()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -96,6 +103,22 @@ export default function TeacherClassroomDetailPage() {
       router.push('/login')
     }
   }, [router, classroomId])
+
+  const fetchActiveSession = async () => {
+    try {
+      const response = await attendanceAPI.getActiveSession(classroomId)
+      if (response.success && response.data.activeSession) {
+        setActiveSession({
+          id: response.data.activeSession.id,
+          mode: response.data.activeSession.mode,
+          topic: response.data.activeSession.topic || 'General Class',
+          createdAt: response.data.activeSession.createdAt,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching active session:', error)
+    }
+  }
 
   const fetchClassroomDetails = async () => {
     try {
@@ -145,16 +168,41 @@ export default function TeacherClassroomDetailPage() {
             `/teacher/classrooms/${classroomId}/manual?sessionId=${response.data.session.id}`
           )
         } else {
-          toast.info('QR Session Created', {
-            description: 'QR code display will be implemented soon.',
-          })
-          fetchSessions()
+          // Redirect to QR scanner page
+          router.push(
+            `/teacher/classrooms/${classroomId}/qr-scan/${response.data.session.id}`
+          )
         }
       }
     } catch (error: any) {
+      // Check if error is due to active session
+      if (error.response?.data?.data?.activeSession) {
+        setActiveSession({
+          id: error.response.data.data.activeSession.id,
+          mode: error.response.data.data.activeSession.mode,
+          topic:
+            error.response.data.data.activeSession.topic || 'General Class',
+          createdAt: error.response.data.data.activeSession.createdAt,
+        })
+        setIsCreateDialogOpen(false)
+      }
       toast.error('Failed to create session', {
         description: error.response?.data?.message || 'Please try again.',
       })
+    }
+  }
+
+  const handleResumeSession = () => {
+    if (!activeSession) return
+
+    if (activeSession.mode === 'MANUAL') {
+      router.push(
+        `/teacher/classrooms/${classroomId}/manual?sessionId=${activeSession.id}`
+      )
+    } else {
+      router.push(
+        `/teacher/classrooms/${classroomId}/qr-scan/${activeSession.id}`
+      )
     }
   }
 
@@ -229,40 +277,85 @@ export default function TeacherClassroomDetailPage() {
 
       {/* Content */}
       <div className="container max-w-6xl mx-auto px-4 -mt-8 relative z-10 space-y-6">
-        {/* Quick Actions & Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Quick Actions */}
-          <Card className="lg:col-span-2 border-2 shadow-lg">
+        {/* Active Session Banner */}
+        {activeSession && (
+          <Card className="border-2 border-green-500/50 bg-green-500/10 shadow-lg">
             <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-lg font-semibold">
-                  Create Attendance Session
-                </h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
-                  onClick={() => handleCreateSession('qr')}
-                >
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <QrCode className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="h-14 w-14 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+                    {activeSession.mode === 'QR' ? (
+                      <QrCode className="h-7 w-7 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <ClipboardList className="h-7 w-7 text-green-600 dark:text-green-400" />
+                    )}
                   </div>
-                  <span className="font-semibold">QR Code</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
-                  onClick={() => handleCreateSession('manual')}
-                >
-                  <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <ClipboardList className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
+                        Active Session Running
+                      </h3>
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
+                      >
+                        {activeSession.mode}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-green-800/90 dark:text-green-200/90">
+                      {activeSession.topic} • Started{' '}
+                      {new Date(activeSession.createdAt).toLocaleTimeString()}
+                    </p>
                   </div>
-                  <span className="font-semibold">Manual</span>
+                </div>
+                <Button
+                  onClick={handleResumeSession}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                >
+                  Resume Session
                 </Button>
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Quick Actions & Stats Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Quick Actions */}
+          {!activeSession && (
+            <Card className="lg:col-span-2 border-2 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-semibold">
+                    Create Attendance Session
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
+                    onClick={() => handleCreateSession('qr')}
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <QrCode className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="font-semibold">QR Code</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto flex flex-col gap-3 hover:border-primary hover:bg-primary/5 transition-all"
+                    onClick={() => handleCreateSession('manual')}
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <ClipboardList className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <span className="font-semibold">Manual</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Stats */}
           <div className="space-y-4">
