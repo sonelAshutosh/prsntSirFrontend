@@ -285,6 +285,28 @@ export const classroomAPI = {
     })
     return response.data
   },
+
+  getStudents: async (
+    id: string
+  ): Promise<{
+    success: boolean
+    data?: {
+      students: Array<{
+        studentId: string
+        userId: {
+          _id: string
+          firstName: string
+          lastName: string
+          email: string
+          profileImage?: string
+        }
+        joinedAt: string
+      }>
+    }
+  }> => {
+    const response = await api.get(`/classroom/${id}/students`)
+    return response.data
+  },
 }
 
 // Attendance Session Interfaces

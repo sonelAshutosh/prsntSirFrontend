@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Sparkles,
   UserPlus,
+  Users,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -346,6 +347,20 @@ export default function TeacherClassroomsPage() {
                         {classroom.code}
                       </Badge>
                       <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(
+                              `/teacher/classrooms/${classroom.id}/list`
+                            )
+                          }}
+                          title="View Students"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
