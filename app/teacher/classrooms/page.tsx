@@ -15,9 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { BookOpen, PlusCircle, RefreshCw, Sparkles } from 'lucide-react'
+import {
+  BookOpen,
+  PlusCircle,
+  RefreshCw,
+  Sparkles,
+  UserPlus,
+  X,
+} from 'lucide-react'
 import { toast } from 'sonner'
-import { classroomAPI, type Classroom } from '@/lib/api'
+import { classroomAPI, type Classroom, type Teacher } from '@/lib/api'
 
 interface UserData {
   _id?: string
@@ -41,6 +48,9 @@ export default function TeacherClassroomsPage() {
     null
   )
   const [isRegenerating, setIsRegenerating] = useState(false)
+  const [manageCoTeachersOpen, setManageCoTeachersOpen] = useState(false)
+  const [coTeacherEmail, setCoTeacherEmail] = useState('')
+  const [isAddingCoTeacher, setIsAddingCoTeacher] = useState(false)
   const [createClassData, setCreateClassData] = useState({
     name: '',
     subject: '',
@@ -149,6 +159,78 @@ export default function TeacherClassroomsPage() {
     setRegenerateCodeOpen(true)
   }
 
+  const handleManageCoTeachersClick = (
+    e: React.MouseEvent,
+    classroom: Classroom
+  ) => {
+    e.stopPropagation()
+    setSelectedClassroom(classroom)
+    setManageCoTeachersOpen(true)
+  }
+
+  const handleAddCoTeacher = async () => {
+    if (!selectedClassroom || !coTeacherEmail) {
+      toast.error('Validation error', {
+        description: 'Please enter a teacher email',
+      })
+      return
+    }
+
+    setIsAddingCoTeacher(true)
+    try {
+      const response = await classroomAPI.addCoTeacher(
+        selectedClassroom.id,
+        coTeacherEmail
+      )
+      if (response.success && response.data) {
+        setClassrooms((prev) =>
+          prev.map((c) =>
+            c.id === selectedClassroom.id ? response.data!.classroom : c
+          )
+        )
+        setSelectedClassroom(response.data.classroom)
+        toast.success('Co-teacher added!', {
+          description: `${coTeacherEmail} has been added as a co-teacher`,
+        })
+        setCoTeacherEmail('')
+      }
+    } catch (error: any) {
+      console.error('Error adding co-teacher:', error)
+      toast.error('Failed to add co-teacher', {
+        description: error.response?.data?.message || 'Please try again.',
+      })
+    } finally {
+      setIsAddingCoTeacher(false)
+    }
+  }
+
+  const handleRemoveCoTeacher = async (teacherId: string) => {
+    if (!selectedClassroom) return
+
+    try {
+      const response = await classroomAPI.removeCoTeacher(
+        selectedClassroom.id,
+        teacherId
+      )
+      if (response.success && response.data) {
+        setClassrooms((prev) =>
+          prev.map((c) =>
+            c.id === selectedClassroom.id ? response.data!.classroom : c
+          )
+        )
+        setSelectedClassroom(response.data.classroom)
+        toast.success('Co-teacher removed!', {
+          description: 'Co-teacher has been removed from the classroom',
+        })
+      }
+    } catch (error: any) {
+      console.error('Error removing co-teacher:', error)
+      toast.error('Failed to remove co-teacher', {
+        description: error.response?.data?.message || 'Please try again.',
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -247,15 +329,28 @@ export default function TeacherClassroomsPage() {
                       >
                         {classroom.code}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
-                        onClick={(e) => handleRegenerateClick(e, classroom)}
-                        title="Regenerate Code"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
+                          onClick={(e) =>
+                            handleManageCoTeachersClick(e, classroom)
+                          }
+                          title="Manage Co-Teachers"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
+                          onClick={(e) => handleRegenerateClick(e, classroom)}
+                          title="Regenerate Code"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -354,6 +449,145 @@ export default function TeacherClassroomsPage() {
             </Button>
             <Button onClick={handleRegenerateCode} disabled={isRegenerating}>
               {isRegenerating ? 'Regenerating...' : 'Regenerate Code'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Co-Teachers Dialog */}
+      <Dialog
+        open={manageCoTeachersOpen}
+        onOpenChange={(open) => {
+          setManageCoTeachersOpen(open)
+          if (!open) {
+            setSelectedClassroom(null)
+            setCoTeacherEmail('')
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage Co-Teachers</DialogTitle>
+            <DialogDescription>
+              Add or remove co-teachers for{' '}
+              <span className="font-semibold">{selectedClassroom?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Add Co-Teacher Section */}
+            <div className="space-y-3">
+              <Label htmlFor="coteacher-email">Add Co-Teacher</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="coteacher-email"
+                  type="email"
+                  placeholder="teacher@example.com"
+                  value={coTeacherEmail}
+                  onChange={(e) => setCoTeacherEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddCoTeacher()
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleAddCoTeacher}
+                  disabled={isAddingCoTeacher || !coTeacherEmail}
+                  className="gap-2"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  {isAddingCoTeacher ? 'Adding...' : 'Add'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter the email address of a registered teacher
+              </p>
+            </div>
+
+            {/* Current Co-Teachers List */}
+            <div className="space-y-3">
+              <Label>
+                Current Teachers (
+                {Array.isArray(selectedClassroom?.teachers)
+                  ? selectedClassroom.teachers.length
+                  : 0}
+                )
+              </Label>
+              <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                {selectedClassroom?.teachers &&
+                Array.isArray(selectedClassroom.teachers) &&
+                selectedClassroom.teachers.length > 0 ? (
+                  selectedClassroom.teachers.map((teacher) => {
+                    // Handle both populated and non-populated teacher data
+                    const isPopulated =
+                      typeof teacher === 'object' && teacher !== null
+                    const teacherId = isPopulated
+                      ? (teacher as Teacher)._id || (teacher as Teacher).id
+                      : teacher
+                    const teacherName = isPopulated
+                      ? `${(teacher as Teacher).firstName} ${
+                          (teacher as Teacher).lastName
+                        }`
+                      : 'Loading...'
+                    const teacherEmail = isPopulated
+                      ? (teacher as Teacher).email
+                      : ''
+
+                    return (
+                      <div
+                        key={teacherId}
+                        className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium">{teacherName}</p>
+                          {teacherEmail && (
+                            <p className="text-sm text-muted-foreground">
+                              {teacherEmail}
+                            </p>
+                          )}
+                        </div>
+                        {selectedClassroom.teachers.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() =>
+                              handleRemoveCoTeacher(teacherId as string)
+                            }
+                            title="Remove co-teacher"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="p-6 text-center text-muted-foreground">
+                    No teachers found
+                  </div>
+                )}
+              </div>
+              {selectedClassroom?.teachers &&
+                selectedClassroom.teachers.length === 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    At least one teacher is required for the classroom
+                  </p>
+                )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setManageCoTeachersOpen(false)
+                setSelectedClassroom(null)
+                setCoTeacherEmail('')
+              }}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

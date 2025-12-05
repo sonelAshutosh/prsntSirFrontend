@@ -185,12 +185,20 @@ export const studentAPI = {
 }
 
 // Classroom Interfaces
+export interface Teacher {
+  _id?: string
+  id?: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
 export interface Classroom {
   id: string
   name: string
   subject: string
   code: string
-  teachers: string[]
+  teachers: (string | Teacher)[]
   createdAt: string
   updatedAt: string
 }
@@ -254,6 +262,26 @@ export const classroomAPI = {
 
   regenerateCode: async (id: string): Promise<ClassroomResponse> => {
     const response = await api.post(`/classroom/${id}/regenerate-code`)
+    return response.data
+  },
+
+  addCoTeacher: async (
+    id: string,
+    teacherEmail: string
+  ): Promise<ClassroomResponse> => {
+    const response = await api.post(`/classroom/${id}/add-coteacher`, {
+      teacherEmail,
+    })
+    return response.data
+  },
+
+  removeCoTeacher: async (
+    id: string,
+    teacherId: string
+  ): Promise<ClassroomResponse> => {
+    const response = await api.post(`/classroom/${id}/remove-coteacher`, {
+      teacherId,
+    })
     return response.data
   },
 }
