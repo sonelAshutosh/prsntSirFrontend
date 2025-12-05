@@ -191,6 +191,7 @@ export interface Teacher {
   firstName: string
   lastName: string
   email: string
+  profileImage?: string
 }
 
 export interface Classroom {

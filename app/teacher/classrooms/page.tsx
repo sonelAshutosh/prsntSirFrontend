@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   BookOpen,
   PlusCircle,
@@ -309,9 +310,24 @@ export default function TeacherClassroomsPage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <BookOpen className="h-6 w-6 text-primary" />
-                      </div>
+                      {/* Creator Avatar */}
+                      {classroom.teachers && classroom.teachers.length > 0 && (
+                        <Avatar className="h-12 w-12 border-2 border-primary/20 flex-shrink-0">
+                          <AvatarImage
+                            src={
+                              typeof classroom.teachers[0] === 'object'
+                                ? classroom.teachers[0].profileImage
+                                : undefined
+                            }
+                            alt="Creator"
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                            {typeof classroom.teachers[0] === 'object'
+                              ? `${classroom.teachers[0].firstName[0]}${classroom.teachers[0].lastName[0]}`
+                              : '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1 mb-1">
                           {classroom.name}
@@ -518,7 +534,7 @@ export default function TeacherClassroomsPage() {
                 {selectedClassroom?.teachers &&
                 Array.isArray(selectedClassroom.teachers) &&
                 selectedClassroom.teachers.length > 0 ? (
-                  selectedClassroom.teachers.map((teacher) => {
+                  selectedClassroom.teachers.map((teacher, index) => {
                     // Handle both populated and non-populated teacher data
                     const isPopulated =
                       typeof teacher === 'object' && teacher !== null
@@ -534,13 +550,23 @@ export default function TeacherClassroomsPage() {
                       ? (teacher as Teacher).email
                       : ''
 
+                    // First teacher (index 0) is the classroom creator
+                    const isCreator = index === 0
+
                     return (
                       <div
                         key={teacherId}
                         className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors"
                       >
                         <div className="flex-1">
-                          <p className="font-medium">{teacherName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{teacherName}</p>
+                            {isCreator && (
+                              <Badge variant="secondary" className="text-xs">
+                                Creator
+                              </Badge>
+                            )}
+                          </div>
                           {teacherEmail && (
                             <p className="text-sm text-muted-foreground">
                               {teacherEmail}
@@ -555,7 +581,12 @@ export default function TeacherClassroomsPage() {
                             onClick={() =>
                               handleRemoveCoTeacher(teacherId as string)
                             }
-                            title="Remove co-teacher"
+                            disabled={isCreator}
+                            title={
+                              isCreator
+                                ? 'Cannot remove classroom creator'
+                                : 'Remove co-teacher'
+                            }
                           >
                             <X className="h-4 w-4" />
                           </Button>

@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookOpen, LogIn, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type Classroom } from '@/lib/api'
@@ -183,9 +184,24 @@ export default function StudentClassroomsPage() {
               >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-linear-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                    </div>
+                    {/* Creator Avatar */}
+                    {classroom.teachers && classroom.teachers.length > 0 && (
+                      <Avatar className="h-12 w-12 border-2 border-primary/20 flex-shrink-0">
+                        <AvatarImage
+                          src={
+                            typeof classroom.teachers[0] === 'object'
+                              ? classroom.teachers[0].profileImage
+                              : undefined
+                          }
+                          alt="Teacher"
+                        />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                          {typeof classroom.teachers[0] === 'object'
+                            ? `${classroom.teachers[0].firstName[0]}${classroom.teachers[0].lastName[0]}`
+                            : '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1 mb-1">
                         {classroom.name}
