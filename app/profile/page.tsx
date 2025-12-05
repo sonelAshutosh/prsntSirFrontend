@@ -40,6 +40,7 @@ import {
 import { toast } from 'sonner'
 import { userAPI } from '@/lib/api'
 import { useTheme } from '@/components/theme-provider'
+import imageCompression from 'browser-image-compression'
 
 interface UserData {
   _id?: string
@@ -147,14 +148,35 @@ function ProfilePage() {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be smaller than 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be smaller than 10MB')
       return
     }
 
     setIsUploadingImage(true)
 
     try {
+      // Compress the image before uploading
+      // Base64 encoding increases size by ~33%, so we target smaller compressed size
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: 0.05, // Max 50KB (becomes ~67KB after base64)
+        maxWidthOrHeight: 1024, // 1024px is plenty for profile pictures
+        initialQuality: 0.7, // 70% quality - good balance
+        useWebWorker: true,
+      })
+
+      console.log('Original file size:', (file.size / 1024).toFixed(2), 'KB')
+      console.log(
+        'Compressed file size:',
+        (compressedFile.size / 1024).toFixed(2),
+        'KB'
+      )
+      console.log(
+        'Estimated base64 size:',
+        ((compressedFile.size * 1.33) / 1024).toFixed(2),
+        'KB'
+      )
+
       const reader = new FileReader()
       reader.onloadend = async () => {
         const base64String = reader.result as string
@@ -176,9 +198,10 @@ function ProfilePage() {
         toast.error('Failed to read file')
         setIsUploadingImage(false)
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(compressedFile)
     } catch (error) {
       console.error('Image upload error:', error)
+      toast.error('Failed to compress image')
       setIsUploadingImage(false)
     }
   }
@@ -299,7 +322,7 @@ function ProfilePage() {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg opacity-100 transition-opacity"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingImage}
                 >
