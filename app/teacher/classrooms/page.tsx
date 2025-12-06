@@ -24,6 +24,7 @@ import {
   UserPlus,
   Users,
   X,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { classroomAPI, type Classroom, type Teacher } from '@/lib/api'
@@ -53,6 +54,12 @@ export default function TeacherClassroomsPage() {
   const [manageCoTeachersOpen, setManageCoTeachersOpen] = useState(false)
   const [coTeacherEmail, setCoTeacherEmail] = useState('')
   const [isAddingCoTeacher, setIsAddingCoTeacher] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [classroomToDelete, setClassroomToDelete] = useState<Classroom | null>(
+    null
+  )
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeletingClass, setIsDeletingClass] = useState(false)
   const [createClassData, setCreateClassData] = useState({
     name: '',
     subject: '',
@@ -233,6 +240,47 @@ export default function TeacherClassroomsPage() {
     }
   }
 
+  const handleDeleteClick = (classroom: Classroom, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setClassroomToDelete(classroom)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteClassroom = async () => {
+    if (!classroomToDelete) return
+
+    // Check if user typed the classroom name correctly
+    if (deleteConfirmText !== classroomToDelete.name) {
+      toast.error('Confirmation failed', {
+        description: 'Please type the classroom name exactly as shown',
+      })
+      return
+    }
+
+    setIsDeletingClass(true)
+    try {
+      const response = await classroomAPI.delete(classroomToDelete.id)
+      if (response.success) {
+        setClassrooms((prev) =>
+          prev.filter((c) => c.id !== classroomToDelete.id)
+        )
+        toast.success('Classroom deleted', {
+          description: 'All related data has been permanently deleted',
+        })
+        setDeleteDialogOpen(false)
+        setClassroomToDelete(null)
+        setDeleteConfirmText('')
+      }
+    } catch (error: any) {
+      console.error('Error deleting classroom:', error)
+      toast.error('Failed to delete classroom', {
+        description: error.response?.data?.message || 'Please try again.',
+      })
+    } finally {
+      setIsDeletingClass(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -381,6 +429,25 @@ export default function TeacherClassroomsPage() {
                         >
                           <RefreshCw className="h-4 w-4" />
                         </Button>
+                        {/* Only show delete button to creator (0th teacher) */}
+                        {user &&
+                          classroom.teachers &&
+                          classroom.teachers.length > 0 &&
+                          typeof classroom.teachers[0] === 'object' &&
+                          (classroom.teachers[0]._id === user._id ||
+                            classroom.teachers[0].id === user.id ||
+                            classroom.teachers[0]._id === user.id ||
+                            classroom.teachers[0].id === user._id) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 hover:bg-destructive hover:text-destructive-foreground transition-all"
+                              onClick={(e) => handleDeleteClick(classroom, e)}
+                              title="Delete Classroom"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -634,6 +701,67 @@ export default function TeacherClassroomsPage() {
               }}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Classroom Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              Delete Classroom
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete{' '}
+              <span className="font-semibold">{classroomToDelete?.name}</span>{' '}
+              and remove all related data including:
+            </DialogDescription>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
+              <li>All attendance sessions</li>
+              <li>All attendance records</li>
+              <li>Student enrollments</li>
+            </ul>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm">
+                Type{' '}
+                <span className="font-mono font-bold">
+                  {classroomToDelete?.name}
+                </span>{' '}
+                to confirm
+              </Label>
+              <Input
+                id="delete-confirm"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type classroom name here"
+                disabled={isDeletingClass}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false)
+                setClassroomToDelete(null)
+                setDeleteConfirmText('')
+              }}
+              disabled={isDeletingClass}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteClassroom}
+              disabled={
+                isDeletingClass || deleteConfirmText !== classroomToDelete?.name
+              }
+            >
+              {isDeletingClass ? 'Deleting...' : 'Delete Permanently'}
             </Button>
           </DialogFooter>
         </DialogContent>
