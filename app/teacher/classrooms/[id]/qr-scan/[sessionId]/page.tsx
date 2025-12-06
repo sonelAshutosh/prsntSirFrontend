@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { attendanceAPI } from '@/lib/api'
-import { BrowserQRCodeReader } from '@zxing/browser'
+import { Scanner } from '@yudiel/react-qr-scanner'
 
 interface ScannedStudent {
   id: string
@@ -37,23 +37,10 @@ export default function QRScannerPage() {
   const [isScanning, setIsScanning] = useState(false)
   const [scannedStudents, setScannedStudents] = useState<ScannedStudent[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isInsecureContext, setIsInsecureContext] = useState(false)
-  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null)
 
   // Cooldown tracking to prevent duplicate scans
   const scanCooldownRef = useRef<Map<string, number>>(new Map())
-  const SCAN_COOLDOWN_MS = 3000 // 3 seconds cooldown per QR code
-
-  // Check if running on insecure context (HTTP on non-localhost)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isHttp = window.location.protocol === 'http:'
-      const isNotLocalhost =
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1'
-      setIsInsecureContext(isHttp && isNotLocalhost)
-    }
-  }, [])
+  const SCAN_COOLDOWN_MS = 500 // Reduced to 500ms for faster re-scanning
 
   // Fetch already marked students when page loads
   useEffect(() => {
@@ -62,10 +49,6 @@ export default function QRScannerPage() {
         const response = await attendanceAPI.getMarkedStudents(sessionId)
         if (response.success && response.data.markedStudents) {
           setScannedStudents(response.data.markedStudents)
-          console.log(
-            'Loaded marked students:',
-            response.data.markedStudents.length
-          )
         }
       } catch (error) {
         console.error('Error fetching marked students:', error)
@@ -75,183 +58,16 @@ export default function QRScannerPage() {
     fetchMarkedStudents()
   }, [sessionId])
 
-  useEffect(() => {
-    return () => {
-      // Cleanup scanner on unmount
-      if (codeReaderRef.current && isScanning) {
-        try {
-          const videoElement = document.getElementById(
-            'qr-video'
-          ) as HTMLVideoElement
-          if (videoElement && videoElement.srcObject) {
-            const stream = videoElement.srcObject as MediaStream
-            stream.getTracks().forEach((track) => track.stop())
-          }
-        } catch (err) {
-          console.error('Error cleaning up:', err)
-        }
-      }
-    }
-  }, [isScanning])
-
-  const startScanning = async () => {
-    try {
-      console.log('Starting QR scanner with ZXing...')
-
-      // Check if running on HTTPS (required for mobile)
-      if (
-        window.location.protocol === 'http:' &&
-        window.location.hostname !== 'localhost'
-      ) {
-        toast.error('HTTPS Required', {
-          description:
-            'Camera access requires HTTPS on mobile devices. Please use HTTPS or access from the same device.',
-          duration: 7000,
-        })
-        console.error('Camera access requires HTTPS for remote connections')
-        return
-      }
-
-      // Initialize ZXing reader
-      if (!codeReaderRef.current) {
-        codeReaderRef.current = new BrowserQRCodeReader()
-      }
-
-      // Get available video devices using navigator.mediaDevices
-      const devices = await navigator.mediaDevices.enumerateDevices()
-      const videoDevices = devices.filter(
-        (device) => device.kind === 'videoinput'
-      )
-
-      console.log('Available cameras:', videoDevices)
-
-      if (!videoDevices || videoDevices.length === 0) {
-        toast.error('No camera found', {
-          description: 'Please connect a camera and try again',
-        })
-        return
-      }
-
-      // Try to find rear camera first, fallback to first available
-      const selectedDevice =
-        videoDevices.find((device) =>
-          device.label.toLowerCase().includes('back')
-        ) ||
-        videoDevices.find((device) =>
-          device.label.toLowerCase().includes('rear')
-        ) ||
-        videoDevices[0]
-
-      console.log('Using camera:', selectedDevice.label)
-
-      setIsScanning(true)
-
-      // Start decoding from video device
-      codeReaderRef.current.decodeFromVideoDevice(
-        selectedDevice.deviceId,
-        'qr-video',
-        (result, error) => {
-          if (result) {
-            console.log('QR Code detected:', result.getText())
-            onScanSuccess(result.getText())
-          }
-          // Ignore errors - they happen constantly while scanning
-        }
-      )
-
-      // Hide loading overlay after camera starts
-      setTimeout(() => {
-        const loadingOverlay = document.getElementById('camera-loading')
-        if (loadingOverlay) {
-          loadingOverlay.style.display = 'none'
-        }
-      }, 1000)
-
-      toast.success('Scanner started', {
-        description: 'Point camera at student QR code',
-      })
-    } catch (err: any) {
-      console.error('Error starting scanner:', err)
-
-      // Provide specific error messages
-      let errorDescription = 'Please check camera permissions'
-
-      if (
-        err.name === 'NotAllowedError' ||
-        err.name === 'PermissionDeniedError'
-      ) {
-        errorDescription =
-          'Camera access denied. Please allow camera permissions in your browser settings.'
-      } else if (err.name === 'NotFoundError') {
-        errorDescription =
-          'No camera found. Please connect a camera and refresh the page.'
-      } else if (
-        err.name === 'NotReadableError' ||
-        err.name === 'TrackStartError'
-      ) {
-        errorDescription =
-          'Camera is already in use by another application. Please close other apps using the camera.'
-      } else if (
-        err.name === 'NotSupportedError' ||
-        err.message?.includes('secure')
-      ) {
-        errorDescription =
-          'Camera access requires HTTPS on mobile devices. Please use a secure connection.'
-      } else if (err.message) {
-        errorDescription = err.message
-      }
-
-      setIsScanning(false)
-      toast.error('Failed to start scanner', {
-        description: errorDescription,
-        duration: 5000,
-      })
-    }
+  const startScanning = () => {
+    setIsScanning(true)
+    toast.success('Scanner started', {
+      description: 'Point camera at student QR code',
+    })
   }
 
-  const stopScanning = async () => {
-    try {
-      const videoElement = document.getElementById(
-        'qr-video'
-      ) as HTMLVideoElement
-      if (videoElement && videoElement.srcObject) {
-        const stream = videoElement.srcObject as MediaStream
-        stream.getTracks().forEach((track) => track.stop())
-        videoElement.srcObject = null
-      }
-      setIsScanning(false)
-      toast.info('Scanner stopped')
-      console.log('Scanner stopped successfully')
-    } catch (err: any) {
-      console.error('Error stopping scanner:', err)
-      setIsScanning(false)
-    }
-  }
-
-  const playBeep = () => {
-    try {
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)()
-      const oscillator = audioContext.createOscillator()
-      const gainNode = audioContext.createGain()
-
-      oscillator.connect(gainNode)
-      gainNode.connect(audioContext.destination)
-
-      oscillator.frequency.value = 800
-      oscillator.type = 'sine'
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-      gainNode.gain.exponentialRampToValueAtTime(
-        0.01,
-        audioContext.currentTime + 0.2
-      )
-
-      oscillator.start(audioContext.currentTime)
-      oscillator.stop(audioContext.currentTime + 0.2)
-    } catch (err) {
-      console.warn('Could not play beep:', err)
-    }
+  const stopScanning = () => {
+    setIsScanning(false)
+    toast.info('Scanner stopped')
   }
 
   const showSuccessOverlay = () => {
@@ -304,23 +120,15 @@ export default function QRScannerPage() {
   }
 
   const onScanSuccess = async (decodedText: string) => {
-    console.log('QR Code detected:', decodedText)
-
     // Check cooldown to prevent duplicate scans
     const now = Date.now()
     const lastScanTime = scanCooldownRef.current.get(decodedText)
 
     if (lastScanTime && now - lastScanTime < SCAN_COOLDOWN_MS) {
-      console.log(
-        `Cooldown active for ${decodedText}, ignoring scan (${Math.round(
-          (SCAN_COOLDOWN_MS - (now - lastScanTime)) / 1000
-        )}s remaining)`
-      )
       return
     }
 
     if (isProcessing) {
-      console.log('Already processing, skipping...')
       return
     }
 
@@ -328,11 +136,9 @@ export default function QRScannerPage() {
     scanCooldownRef.current.set(decodedText, now)
 
     setIsProcessing(true)
-    console.log('Processing QR code...')
 
     try {
       const response = await attendanceAPI.scanQRCode(sessionId, decodedText)
-      console.log('API Response:', response)
 
       if (response.success && response.data) {
         const student: ScannedStudent = {
@@ -342,19 +148,14 @@ export default function QRScannerPage() {
         }
 
         setScannedStudents((prev) => [student, ...prev])
-
-        playBeep()
         showSuccessOverlay()
 
         toast.success('Attendance marked!', {
           description: `${student.name} - Present`,
           duration: 3000,
         })
-
-        console.log('Attendance marked successfully for:', student.name)
       }
     } catch (error: any) {
-      console.error('Error marking attendance:', error)
       const errorMessage =
         error.response?.data?.message || 'Failed to mark attendance'
 
@@ -370,7 +171,6 @@ export default function QRScannerPage() {
     } finally {
       setTimeout(() => {
         setIsProcessing(false)
-        console.log('Ready for next scan')
 
         // Clean up old cooldown entries (older than cooldown period)
         const cleanupTime = Date.now() - SCAN_COOLDOWN_MS
@@ -379,7 +179,7 @@ export default function QRScannerPage() {
             scanCooldownRef.current.delete(qrCode)
           }
         }
-      }, 1000)
+      }, 100) // Reduced from 1000ms to 100ms for faster scanning
     }
   }
 
@@ -398,16 +198,8 @@ export default function QRScannerPage() {
 
   return (
     <div className="min-h-screen w-full bg-background pb-24 animate-fade-in">
-      {/* Ensure video is visible */}
+      {/* Animations */}
       <style jsx global>{`
-        #qr-video {
-          width: 100% !important;
-          max-width: 100% !important;
-          height: auto !important;
-          display: block !important;
-          border-radius: 12px;
-        }
-
         @keyframes highlightFade {
           0% {
             background-color: rgba(34, 197, 94, 0.2);
@@ -464,29 +256,33 @@ export default function QRScannerPage() {
             <div className="space-y-4">
               {/* Scanner Container */}
               <div className="relative">
-                <video
-                  id="qr-video"
-                  className={`w-full ${isScanning ? 'block' : 'hidden'}`}
-                  style={{
-                    minHeight: isScanning ? '400px' : '0',
-                    maxWidth: '100%',
-                  }}
-                />
-
-                {/* Loading overlay */}
-                {isScanning && (
-                  <div
-                    className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none"
-                    id="camera-loading"
-                  >
-                    <div className="text-white text-center">
-                      <div className="animate-spin h-8 w-8 border-4 border-white border-t-transparent rounded-full mx-auto mb-2"></div>
-                      <p className="text-sm">Initializing camera...</p>
-                    </div>
+                {isScanning ? (
+                  <div className="w-full rounded-xl overflow-hidden">
+                    <Scanner
+                      onScan={(result) => {
+                        if (result && result.length > 0) {
+                          onScanSuccess(result[0].rawValue)
+                        }
+                      }}
+                      onError={(error) => {
+                        console.log('Scanner error:', error)
+                      }}
+                      constraints={{
+                        facingMode: 'environment', // Use back camera
+                      }}
+                      scanDelay={100} // Very fast scanning - 100ms between scans
+                      styles={{
+                        container: {
+                          width: '100%',
+                          minHeight: '400px',
+                        },
+                      }}
+                      components={{
+                        finder: true, // Show scanning box
+                      }}
+                    />
                   </div>
-                )}
-
-                {!isScanning && (
+                ) : (
                   <div className="flex flex-col items-center justify-center py-16 px-4 bg-muted/30 rounded-xl">
                     <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                       <Camera className="h-12 w-12 text-primary" />
