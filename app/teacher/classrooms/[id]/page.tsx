@@ -457,11 +457,13 @@ export default function TeacherClassroomDetailPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-primary mb-1">
-                            {Math.round(
-                              (session.presentStudents /
-                                session.totalStudents) *
-                                100
-                            )}
+                            {session.totalStudents > 0
+                              ? Math.round(
+                                  (session.presentStudents /
+                                    session.totalStudents) *
+                                    100
+                                )
+                              : 0}
                             %
                           </div>
                           <p className="text-sm text-muted-foreground">

@@ -136,7 +136,12 @@ export interface StudentProfile {
   id: string
   studentId: string
   qrCode: string
-  classesJoined: string[]
+  classesJoined: Array<{
+    classroomId: string
+    status: 'ACTIVE' | 'LEFT'
+    joinedAt: string
+    leftAt: string | null
+  }>
   createdAt: string
   updatedAt: string
 }
@@ -180,6 +185,16 @@ export const studentAPI = {
 
   getMyClasses: async (): Promise<ClassroomsResponse> => {
     const response = await api.get('/student/my-classes')
+    return response.data
+  },
+
+  leaveClassroom: async (
+    classroomId: string
+  ): Promise<{
+    success: boolean
+    message: string
+  }> => {
+    const response = await api.post(`/student/leave-classroom/${classroomId}`)
     return response.data
   },
 }
@@ -287,7 +302,8 @@ export const classroomAPI = {
   },
 
   getStudents: async (
-    id: string
+    id: string,
+    status?: 'active' | 'left' | 'all'
   ): Promise<{
     success: boolean
     data?: {
@@ -300,11 +316,14 @@ export const classroomAPI = {
           email: string
           profileImage?: string
         }
+        enrollmentStatus?: 'ACTIVE' | 'LEFT'
         joinedAt: string
+        leftAt?: string | null
       }>
     }
   }> => {
-    const response = await api.get(`/classroom/${id}/students`)
+    const params = status ? `?status=${status}` : ''
+    const response = await api.get(`/classroom/${id}/students${params}`)
     return response.data
   },
 }

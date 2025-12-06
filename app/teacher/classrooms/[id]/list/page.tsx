@@ -20,7 +20,9 @@ interface Student {
     profileImage?: string
   }
   studentId: string
+  enrollmentStatus?: 'ACTIVE' | 'LEFT'
   joinedAt: string
+  leftAt?: string | null
 }
 
 interface Classroom {
@@ -38,6 +40,9 @@ export default function StudentListPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<'active' | 'left' | 'all'>(
+    'active'
+  )
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -59,6 +64,27 @@ export default function StudentListPage() {
     }
   }, [classroomId, router])
 
+  useEffect(() => {
+    if (classroom) {
+      fetchStudents()
+    }
+  }, [statusFilter])
+
+  const fetchStudents = async () => {
+    try {
+      const studentsResponse = await classroomAPI.getStudents(
+        classroomId,
+        statusFilter
+      )
+      if (studentsResponse.success && studentsResponse.data) {
+        setStudents(studentsResponse.data.students)
+      }
+    } catch (error: any) {
+      console.error('Error fetching students:', error)
+      toast.error('Failed to load students')
+    }
+  }
+
   const fetchClassroomAndStudents = async () => {
     try {
       // Fetch classroom details
@@ -77,10 +103,7 @@ export default function StudentListPage() {
       }
 
       // Fetch students enrolled in this classroom
-      const studentsResponse = await classroomAPI.getStudents(classroomId)
-      if (studentsResponse.success && studentsResponse.data) {
-        setStudents(studentsResponse.data.students)
-      }
+      await fetchStudents()
     } catch (error: any) {
       console.error('Error fetching data:', error)
       toast.error('Failed to load student list')
@@ -148,8 +171,31 @@ export default function StudentListPage() {
       <div className="container max-w-6xl mx-auto px-4 -mt-12 relative z-10">
         <Card className="border-2 shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <span>Enrolled Students ({students.length})</span>
+              <div className="flex gap-2">
+                <Button
+                  variant={statusFilter === 'active' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('active')}
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={statusFilter === 'left' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('left')}
+                >
+                  Left
+                </Button>
+                <Button
+                  variant={statusFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -185,13 +231,28 @@ export default function StudentListPage() {
 
                       {/* Student Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg">
-                          {student.userId.firstName} {student.userId.lastName}
-                        </h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg">
+                            {student.userId.firstName} {student.userId.lastName}
+                          </h3>
+                          {student.enrollmentStatus === 'LEFT' && (
+                            <Badge variant="destructive" className="text-xs">
+                              Left
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Mail className="h-3 w-3" />
                           <span className="truncate">
                             {student.userId.email}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            Joined: {formatDate(student.joinedAt)}
+                            {student.leftAt &&
+                              ` • Left: ${formatDate(student.leftAt)}`}
                           </span>
                         </div>
                       </div>

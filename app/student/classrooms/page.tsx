@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { BookOpen, LogIn, Sparkles } from 'lucide-react'
+import { BookOpen, LogIn, Sparkles, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type Classroom } from '@/lib/api'
 
@@ -103,6 +103,44 @@ export default function StudentClassroomsPage() {
     }
   }
 
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false)
+  const [classroomToLeave, setClassroomToLeave] = useState<Classroom | null>(
+    null
+  )
+  const [isLeavingClass, setIsLeavingClass] = useState(false)
+
+  const handleLeaveClick = (classroom: Classroom, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setClassroomToLeave(classroom)
+    setLeaveDialogOpen(true)
+  }
+
+  const handleLeaveClass = async () => {
+    if (!classroomToLeave) return
+
+    setIsLeavingClass(true)
+    try {
+      const response = await studentAPI.leaveClassroom(classroomToLeave.id)
+      if (response.success) {
+        setClassrooms((prev) =>
+          prev.filter((c) => c.id !== classroomToLeave.id)
+        )
+        toast.success('Left classroom', {
+          description: response.message,
+        })
+        setLeaveDialogOpen(false)
+        setClassroomToLeave(null)
+      }
+    } catch (error: any) {
+      console.error('Error leaving class:', error)
+      toast.error('Failed to leave classroom', {
+        description: error.response?.data?.message || 'Please try again.',
+      })
+    } finally {
+      setIsLeavingClass(false)
+    }
+  }
+
   const handleClassClick = (classroomId: string) => {
     router.push(`/student/classrooms/${classroomId}`)
   }
@@ -183,7 +221,7 @@ export default function StudentClassroomsPage() {
                 onClick={() => handleClassClick(classroom.id)}
               >
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     {/* Creator Avatar */}
                     {classroom.teachers && classroom.teachers.length > 0 && (
                       <Avatar className="h-12 w-12 border-2 border-primary/20 flex-shrink-0">
@@ -202,7 +240,7 @@ export default function StudentClassroomsPage() {
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 justify-center min-w-0">
                       <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1 mb-1">
                         {classroom.name}
                       </h3>
@@ -210,6 +248,14 @@ export default function StudentClassroomsPage() {
                         {classroom.subject}
                       </p>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => handleLeaveClick(classroom, e)}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -253,6 +299,39 @@ export default function StudentClassroomsPage() {
             </Button>
             <Button onClick={handleJoinClass} disabled={isJoiningClass}>
               {isJoiningClass ? 'Joining...' : 'Join Class'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Class Dialog */}
+      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave Classroom</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave{' '}
+              <span className="font-semibold">{classroomToLeave?.name}</span>?
+              You can rejoin later using the class code.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setLeaveDialogOpen(false)
+                setClassroomToLeave(null)
+              }}
+              disabled={isLeavingClass}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveClass}
+              disabled={isLeavingClass}
+            >
+              {isLeavingClass ? 'Leaving...' : 'Leave Classroom'}
             </Button>
           </DialogFooter>
         </DialogContent>
