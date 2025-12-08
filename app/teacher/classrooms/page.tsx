@@ -430,68 +430,13 @@ export default function TeacherClassroomsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t">
+                    <div className="flex items-center justify-center pt-3 border-t">
                       <Badge
                         variant="secondary"
                         className="font-mono text-sm px-3 py-1"
                       >
-                        {classroom.code}
+                        Code: {classroom.code}
                       </Badge>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            router.push(
-                              `/teacher/classrooms/${classroom.id}/list`
-                            )
-                          }}
-                          title="View Students"
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
-                          onClick={(e) =>
-                            handleManageCoTeachersClick(e, classroom)
-                          }
-                          title="Manage Co-Teachers"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 hover:bg-accent hover:text-primary transition-all"
-                          onClick={(e) => handleRegenerateClick(e, classroom)}
-                          title="Regenerate Code"
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        {/* Only show delete button to creator (0th teacher) */}
-                        {user &&
-                          classroom.teachers &&
-                          classroom.teachers.length > 0 &&
-                          typeof classroom.teachers[0] === 'object' &&
-                          (classroom.teachers[0]._id === user._id ||
-                            classroom.teachers[0].id === user.id ||
-                            classroom.teachers[0]._id === user.id ||
-                            classroom.teachers[0].id === user._id) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 hover:bg-destructive hover:text-destructive-foreground transition-all"
-                              onClick={(e) => handleDeleteClick(classroom, e)}
-                              title="Delete Classroom"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                      </div>
                     </div>
                   </div>
                 </CardContent>

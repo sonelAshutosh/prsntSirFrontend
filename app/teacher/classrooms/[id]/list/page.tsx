@@ -184,10 +184,10 @@ export default function StudentListPage() {
             variant="ghost"
             size="sm"
             className="mb-4 gap-2"
-            onClick={() => router.push('/teacher/classrooms')}
+            onClick={() => router.push(`/teacher/classrooms/${classroomId}`)}
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Classes
+            Back to Classroom
           </Button>
           <div className="flex items-center gap-3 mb-2">
             <Users className="h-8 w-8 text-primary" />
