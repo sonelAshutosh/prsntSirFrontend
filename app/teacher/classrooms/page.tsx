@@ -28,6 +28,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { classroomAPI, type Classroom, type Teacher } from '@/lib/api'
+import { useMyClassrooms, revalidateClassroomLists } from '@/lib/hooks/use-api'
+import { ClassroomCardSkeletonGrid } from '@/components/skeletons/classroom-card-skeleton'
 
 interface UserData {
   _id?: string
@@ -42,8 +44,6 @@ interface UserData {
 export default function TeacherClassroomsPage() {
   const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
-  const [classrooms, setClassrooms] = useState<Classroom[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [createClassOpen, setCreateClassOpen] = useState(false)
   const [isCreatingClass, setIsCreatingClass] = useState(false)
   const [regenerateCodeOpen, setRegenerateCodeOpen] = useState(false)
@@ -65,6 +65,13 @@ export default function TeacherClassroomsPage() {
     subject: '',
   })
 
+  // Use SWR for data fetching with caching
+  const {
+    classrooms,
+    isLoading,
+    mutate: mutateClassrooms,
+  } = useMyClassrooms('teacher')
+
   useEffect(() => {
     const userData = localStorage.getItem('user')
     if (userData) {
@@ -75,7 +82,6 @@ export default function TeacherClassroomsPage() {
           return
         }
         setUser(parsedUser)
-        fetchTeacherClassrooms()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -84,22 +90,6 @@ export default function TeacherClassroomsPage() {
       router.push('/login')
     }
   }, [router])
-
-  const fetchTeacherClassrooms = async () => {
-    try {
-      const response = await classroomAPI.getMyClasses()
-      if (response.success && response.data) {
-        setClassrooms(response.data.classrooms)
-      }
-    } catch (error: any) {
-      console.error('Error fetching classrooms:', error)
-      toast.error('Failed to load classes', {
-        description: error.response?.data?.message || 'Please try again later.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleCreateClass = async () => {
     if (!createClassData.name || !createClassData.subject) {
@@ -113,18 +103,29 @@ export default function TeacherClassroomsPage() {
     try {
       const response = await classroomAPI.create(createClassData)
       if (response.success && response.data) {
-        setClassrooms((prev) => [response.data!.classroom, ...prev])
+        // Optimistically update the cache
+        mutateClassrooms(
+          (current) =>
+            current
+              ? [response.data!.classroom, ...current]
+              : [response.data!.classroom],
+          false
+        )
         toast.success('Class created!', {
           description: `${response.data.classroom.name} - Code: ${response.data.classroom.code}`,
         })
         setCreateClassOpen(false)
         setCreateClassData({ name: '', subject: '' })
+        // Revalidate to ensure data is fresh
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error creating classroom:', error)
       toast.error('Failed to create class', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      // Revert optimistic update on error
+      mutateClassrooms()
     } finally {
       setIsCreatingClass(false)
     }
@@ -137,22 +138,28 @@ export default function TeacherClassroomsPage() {
     try {
       const response = await classroomAPI.regenerateCode(selectedClassroom.id)
       if (response.success && response.data) {
-        setClassrooms((prev) =>
-          prev.map((c) =>
-            c.id === selectedClassroom.id ? response.data!.classroom : c
-          )
+        mutateClassrooms(
+          (current) =>
+            current
+              ? current.map((c) =>
+                  c.id === selectedClassroom.id ? response.data!.classroom : c
+                )
+              : [],
+          false
         )
         toast.success('Code regenerated!', {
           description: `New code: ${response.data.classroom.code}`,
         })
         setRegenerateCodeOpen(false)
         setSelectedClassroom(null)
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error regenerating code:', error)
       toast.error('Failed to regenerate code', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      mutateClassrooms()
     } finally {
       setIsRegenerating(false)
     }
@@ -192,22 +199,28 @@ export default function TeacherClassroomsPage() {
         coTeacherEmail
       )
       if (response.success && response.data) {
-        setClassrooms((prev) =>
-          prev.map((c) =>
-            c.id === selectedClassroom.id ? response.data!.classroom : c
-          )
+        mutateClassrooms(
+          (current) =>
+            current
+              ? current.map((c) =>
+                  c.id === selectedClassroom.id ? response.data!.classroom : c
+                )
+              : [],
+          false
         )
         setSelectedClassroom(response.data.classroom)
         toast.success('Co-teacher added!', {
           description: `${coTeacherEmail} has been added as a co-teacher`,
         })
         setCoTeacherEmail('')
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error adding co-teacher:', error)
       toast.error('Failed to add co-teacher', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      mutateClassrooms()
     } finally {
       setIsAddingCoTeacher(false)
     }
@@ -222,21 +235,27 @@ export default function TeacherClassroomsPage() {
         teacherId
       )
       if (response.success && response.data) {
-        setClassrooms((prev) =>
-          prev.map((c) =>
-            c.id === selectedClassroom.id ? response.data!.classroom : c
-          )
+        mutateClassrooms(
+          (current) =>
+            current
+              ? current.map((c) =>
+                  c.id === selectedClassroom.id ? response.data!.classroom : c
+                )
+              : [],
+          false
         )
         setSelectedClassroom(response.data.classroom)
         toast.success('Co-teacher removed!', {
           description: 'Co-teacher has been removed from the classroom',
         })
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error removing co-teacher:', error)
       toast.error('Failed to remove co-teacher', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      mutateClassrooms()
     }
   }
 
@@ -261,8 +280,10 @@ export default function TeacherClassroomsPage() {
     try {
       const response = await classroomAPI.delete(classroomToDelete.id)
       if (response.success) {
-        setClassrooms((prev) =>
-          prev.filter((c) => c.id !== classroomToDelete.id)
+        mutateClassrooms(
+          (current) =>
+            current ? current.filter((c) => c.id !== classroomToDelete.id) : [],
+          false
         )
         toast.success('Classroom deleted', {
           description: 'All related data has been permanently deleted',
@@ -270,23 +291,45 @@ export default function TeacherClassroomsPage() {
         setDeleteDialogOpen(false)
         setClassroomToDelete(null)
         setDeleteConfirmText('')
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error deleting classroom:', error)
       toast.error('Failed to delete classroom', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      mutateClassrooms()
     } finally {
       setIsDeletingClass(false)
     }
   }
 
-  if (isLoading) {
+  if (isLoading || !classrooms) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen w-full bg-background pb-24">
+        {/* Header */}
+        <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+          <div className="container max-w-6xl mx-auto px-4 relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="h-7 w-7 text-primary" />
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    My Classes
+                  </h1>
+                </div>
+                <p className="text-muted-foreground">
+                  Manage your teaching classes
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content with Skeleton */}
+        <div className="container max-w-6xl mx-auto px-4 -mt-6 relative z-10">
+          <ClassroomCardSkeletonGrid count={6} />
         </div>
       </div>
     )

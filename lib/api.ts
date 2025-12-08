@@ -215,6 +215,7 @@ export interface Classroom {
   subject: string
   code: string
   teachers: (string | Teacher)[]
+  studentCount?: number
   createdAt: string
   updatedAt: string
 }

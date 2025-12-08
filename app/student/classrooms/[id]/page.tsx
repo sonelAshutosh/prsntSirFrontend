@@ -16,6 +16,9 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { classroomAPI, attendanceAPI } from '@/lib/api'
+import { useClassroom, useAttendanceHistory } from '@/lib/hooks/use-api'
+import { StatsSkeleton } from '@/components/skeletons/stats-skeleton'
+import { SessionListSkeleton } from '@/components/skeletons/session-list-skeleton'
 
 interface UserData {
   _id?: string
@@ -40,17 +43,15 @@ export default function StudentClassroomDetailPage() {
   const classroomId = params.id as string
 
   const [user, setUser] = useState<UserData | null>(null)
-  const [classroom, setClassroom] = useState<Classroom | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [history, setHistory] = useState<
-    {
-      id: string
-      date: string
-      topic: string
-      status: 'present' | 'absent'
-      markedAt: string | null
-    }[]
-  >([])
+
+  // Use SWR for data fetching
+  const {
+    classroom,
+    isLoading: isLoadingClassroom,
+    error: classroomError,
+  } = useClassroom(classroomId)
+  const { history, isLoading: isLoadingHistory } =
+    useAttendanceHistory(classroomId)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -64,8 +65,6 @@ export default function StudentClassroomDetailPage() {
         }
 
         setUser(parsedUser)
-        fetchClassroomDetails()
-        fetchAttendanceHistory()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -75,55 +74,57 @@ export default function StudentClassroomDetailPage() {
     }
   }, [router, classroomId])
 
-  const fetchClassroomDetails = async () => {
-    try {
-      const response = await classroomAPI.getById(classroomId)
-      if (response.success && response.data) {
-        setClassroom(response.data.classroom)
-      }
-    } catch (error: any) {
-      console.error('Error fetching classroom:', error)
+  // Redirect if classroom fetch fails
+  useEffect(() => {
+    if (classroomError) {
       toast.error('Failed to load classroom', {
-        description: error.response?.data?.message || 'Please try again later.',
+        description: 'Please try again later.',
       })
       router.push('/student/classrooms')
-    } finally {
-      setIsLoading(false)
     }
+  }, [classroomError, router])
+
+  // Show loading skeleton while data is being fetched
+  const isLoading = isLoadingClassroom || isLoadingHistory
+  const totalSessions = history?.length || 0
+  const presentCount =
+    history?.filter((h) => h.status === 'present').length || 0
+  const attendanceRate =
+    totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
+
+  if (!user) {
+    return null
   }
 
-  const fetchAttendanceHistory = async () => {
-    try {
-      const response = await attendanceAPI.getStudentAttendanceHistory(
-        classroomId
-      )
-      if (response.success) {
-        setHistory(response.data.history)
-      }
-    } catch (error) {
-      console.error('Error fetching attendance history:', error)
-    }
-  }
-
-  if (isLoading) {
+  // Show full page loading skeleton while initial data loads
+  if (!classroom || isLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen w-full bg-background pb-24">
+        {/* Header Skeleton */}
+        <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+          <div className="container max-w-5xl mx-auto px-4 relative">
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-muted/50 animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-8 w-2/3 bg-muted/50 rounded animate-pulse" />
+                <div className="h-5 w-1/3 bg-muted/50 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content with Skeletons */}
+        <div className="container w-full mx-auto px-4 -mt-8 relative z-10 space-y-6">
+          <StatsSkeleton />
+          <div className="space-y-4">
+            <div className="h-8 w-48 bg-muted/50 rounded animate-pulse" />
+            <SessionListSkeleton count={5} />
+          </div>
         </div>
       </div>
     )
   }
-
-  if (!user || !classroom) {
-    return null
-  }
-
-  const totalSessions = history.length
-  const presentCount = history.filter((h) => h.status === 'present').length
-  const attendanceRate =
-    totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
 
   return (
     <div className="min-h-screen w-full bg-background pb-24 animate-fade-in">
@@ -209,7 +210,7 @@ export default function StudentClassroomDetailPage() {
           <h2 className="text-2xl font-bold tracking-tight">
             Attendance History
           </h2>
-          {history.length === 0 ? (
+          {history && history.length === 0 ? (
             <Card className="border-2 border-dashed shadow-lg">
               <CardContent className="text-center py-16">
                 <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -224,7 +225,7 @@ export default function StudentClassroomDetailPage() {
           ) : (
             <div className="space-y-3">
               <Card className="border-2 hover:shadow-lg transition-all">
-                {history.map((session, index) => (
+                {history?.map((session, index) => (
                   <div key={session.id}>
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between">
@@ -271,7 +272,7 @@ export default function StudentClassroomDetailPage() {
                         </Badge>
                       </div>
                     </CardContent>
-                    {index < history.length - 1 && <Separator />}
+                    {history && index < history.length - 1 && <Separator />}
                   </div>
                 ))}
               </Card>

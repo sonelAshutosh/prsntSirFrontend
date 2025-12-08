@@ -28,6 +28,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { classroomAPI, attendanceAPI } from '@/lib/api'
+import {
+  useClassroom,
+  useClassroomSessions,
+  useActiveSession,
+} from '@/lib/hooks/use-api'
+import { StatsSkeleton } from '@/components/skeletons/stats-skeleton'
+import { SessionListSkeleton } from '@/components/skeletons/session-list-skeleton'
 
 interface UserData {
   _id?: string
@@ -53,30 +60,28 @@ export default function TeacherClassroomDetailPage() {
   const classroomId = params.id as string
 
   const [user, setUser] = useState<UserData | null>(null)
-  const [classroom, setClassroom] = useState<Classroom | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createSessionMode, setCreateSessionMode] = useState<'QR' | 'MANUAL'>(
     'MANUAL'
   )
   const [sessionTopic, setSessionTopic] = useState('')
-  const [activeSession, setActiveSession] = useState<{
-    id: string
-    mode: 'MANUAL' | 'QR'
-    topic: string
-    createdAt: string
-  } | null>(null)
-  const [sessions, setSessions] = useState<
-    {
-      id: string
-      date: string
-      type: 'MANUAL' | 'QR'
-      status: 'completed' | 'active'
-      totalStudents: number
-      presentStudents: number
-      topic: string
-    }[]
-  >([])
+
+  // Use SWR hooks for data fetching
+  const {
+    classroom,
+    isLoading: isLoadingClassroom,
+    error: classroomError,
+  } = useClassroom(classroomId)
+  const {
+    sessions,
+    isLoading: isLoadingSessions,
+    mutate: mutateSessions,
+  } = useClassroomSessions(classroomId)
+  const {
+    activeSession,
+    isLoading: isLoadingActiveSession,
+    mutate: mutateActiveSession,
+  } = useActiveSession(classroomId)
 
   useEffect(() => {
     // Get user data from localStorage
@@ -92,9 +97,6 @@ export default function TeacherClassroomDetailPage() {
         }
 
         setUser(parsedUser)
-        fetchClassroomDetails()
-        fetchSessions()
-        fetchActiveSession()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -104,49 +106,15 @@ export default function TeacherClassroomDetailPage() {
     }
   }, [router, classroomId])
 
-  const fetchActiveSession = async () => {
-    try {
-      const response = await attendanceAPI.getActiveSession(classroomId)
-      if (response.success && response.data.activeSession) {
-        setActiveSession({
-          id: response.data.activeSession.id,
-          mode: response.data.activeSession.mode,
-          topic: response.data.activeSession.topic || 'General Class',
-          createdAt: response.data.activeSession.createdAt,
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching active session:', error)
-    }
-  }
-
-  const fetchClassroomDetails = async () => {
-    try {
-      const response = await classroomAPI.getById(classroomId)
-      if (response.success && response.data) {
-        setClassroom(response.data.classroom)
-      }
-    } catch (error: any) {
-      console.error('Error fetching classroom:', error)
+  // Redirect if classroom fetch fails
+  useEffect(() => {
+    if (classroomError) {
       toast.error('Failed to load classroom', {
-        description: error.response?.data?.message || 'Please try again later.',
+        description: 'Please try again later.',
       })
       router.push('/teacher/classrooms')
-    } finally {
-      setIsLoading(false)
     }
-  }
-
-  const fetchSessions = async () => {
-    try {
-      const response = await attendanceAPI.getClassroomSessions(classroomId)
-      if (response.success) {
-        setSessions(response.data.sessions)
-      }
-    } catch (error) {
-      console.error('Error fetching sessions:', error)
-    }
-  }
+  }, [classroomError, router])
 
   const handleCreateSession = (type: 'qr' | 'manual') => {
     setCreateSessionMode(type === 'qr' ? 'QR' : 'MANUAL')
@@ -163,6 +131,9 @@ export default function TeacherClassroomDetailPage() {
       })
       if (response.success && response.data) {
         setIsCreateDialogOpen(false)
+        // Revalidate active session and sessions list
+        mutateActiveSession()
+        mutateSessions()
         if (createSessionMode === 'MANUAL') {
           router.push(
             `/teacher/classrooms/${classroomId}/manual?sessionId=${response.data.session.id}`
@@ -177,13 +148,8 @@ export default function TeacherClassroomDetailPage() {
     } catch (error: any) {
       // Check if error is due to active session
       if (error.response?.data?.data?.activeSession) {
-        setActiveSession({
-          id: error.response.data.data.activeSession.id,
-          mode: error.response.data.data.activeSession.mode,
-          topic:
-            error.response.data.data.activeSession.topic || 'General Class',
-          createdAt: error.response.data.data.activeSession.createdAt,
-        })
+        // Revalidate to get the latest active session
+        mutateActiveSession()
         setIsCreateDialogOpen(false)
       }
       toast.error('Failed to create session', {
@@ -206,24 +172,46 @@ export default function TeacherClassroomDetailPage() {
     }
   }
 
-  if (isLoading) {
+  // Combine loading states
+  const isLoading =
+    isLoadingClassroom || isLoadingSessions || isLoadingActiveSession
+
+  if (!user) {
+    return null
+  }
+
+  if (isLoading || !classroom) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen w-full bg-background pb-24">
+        {/* Header Skeleton */}
+        <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+          <div className="container max-w-5xl mx-auto px-4 relative">
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-muted/50 animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-8 w-2/3 bg-muted/50 rounded animate-pulse" />
+                <div className="h-5 w-1/3 bg-muted/50 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content with Skeletons */}
+        <div className="container w-full mx-auto px-4 -mt-8 relative z-10 space-y-6">
+          <StatsSkeleton />
+          <div className="space-y-4">
+            <div className="h-8 w-48 bg-muted/50 rounded animate-pulse" />
+            <SessionListSkeleton count={5} />
+          </div>
         </div>
       </div>
     )
   }
 
-  if (!user || !classroom) {
-    return null
-  }
-
-  const totalSessions = sessions.length
+  const totalSessions = sessions?.length || 0
   const avgAttendance =
-    sessions.length > 0
+    sessions && sessions.length > 0
       ? Math.round(
           sessions.reduce(
             (acc, s) =>
@@ -405,7 +393,7 @@ export default function TeacherClassroomDetailPage() {
         {/* Recent Sessions */}
         <div className="space-y-4">
           <h2 className="text-2xl font-bold tracking-tight">Class Sessions</h2>
-          {sessions.length === 0 ? (
+          {!sessions || sessions.length === 0 ? (
             <Card className="border-2 border-dashed shadow-lg">
               <CardContent className="text-center py-16">
                 <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">

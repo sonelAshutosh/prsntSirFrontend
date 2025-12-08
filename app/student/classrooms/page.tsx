@@ -18,6 +18,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { BookOpen, LogIn, Sparkles, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import { studentAPI, type Classroom } from '@/lib/api'
+import { useMyClassrooms, revalidateClassroomLists } from '@/lib/hooks/use-api'
+import { ClassroomCardSkeletonGrid } from '@/components/skeletons/classroom-card-skeleton'
 
 interface UserData {
   _id?: string
@@ -32,11 +34,16 @@ interface UserData {
 export default function StudentClassroomsPage() {
   const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
-  const [classrooms, setClassrooms] = useState<Classroom[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [joinClassOpen, setJoinClassOpen] = useState(false)
   const [isJoiningClass, setIsJoiningClass] = useState(false)
   const [classCode, setClassCode] = useState('')
+
+  // Use SWR for data fetching with caching
+  const {
+    classrooms,
+    isLoading,
+    mutate: mutateClassrooms,
+  } = useMyClassrooms('student')
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -48,7 +55,6 @@ export default function StudentClassroomsPage() {
           return
         }
         setUser(parsedUser)
-        fetchStudentClasses()
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -57,22 +63,6 @@ export default function StudentClassroomsPage() {
       router.push('/login')
     }
   }, [router])
-
-  const fetchStudentClasses = async () => {
-    try {
-      const response = await studentAPI.getMyClasses()
-      if (response.success && response.data) {
-        setClassrooms(response.data.classrooms)
-      }
-    } catch (error: any) {
-      console.error('Error fetching classes:', error)
-      toast.error('Failed to load classes', {
-        description: error.response?.data?.message || 'Please try again later.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleJoinClass = async () => {
     if (!classCode.trim()) {
@@ -86,18 +76,29 @@ export default function StudentClassroomsPage() {
     try {
       const response = await studentAPI.joinClass(classCode.toUpperCase())
       if (response.success && response.data) {
-        setClassrooms((prev) => [response.data!.classroom, ...prev])
+        // Optimistically update the cache
+        mutateClassrooms(
+          (current) =>
+            current
+              ? [response.data!.classroom, ...current]
+              : [response.data!.classroom],
+          false
+        )
         toast.success('Joined class!', {
           description: response.message,
         })
         setJoinClassOpen(false)
         setClassCode('')
+        // Revalidate to ensure data is fresh
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error joining class:', error)
       toast.error('Failed to join class', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      // Revert optimistic update on error
+      mutateClassrooms()
     } finally {
       setIsJoiningClass(false)
     }
@@ -122,20 +123,27 @@ export default function StudentClassroomsPage() {
     try {
       const response = await studentAPI.leaveClassroom(classroomToLeave.id)
       if (response.success) {
-        setClassrooms((prev) =>
-          prev.filter((c) => c.id !== classroomToLeave.id)
+        // Optimistically update the cache
+        mutateClassrooms(
+          (current) =>
+            current ? current.filter((c) => c.id !== classroomToLeave.id) : [],
+          false
         )
         toast.success('Left classroom', {
           description: response.message,
         })
         setLeaveDialogOpen(false)
         setClassroomToLeave(null)
+        // Revalidate to ensure data is fresh
+        mutateClassrooms()
       }
     } catch (error: any) {
       console.error('Error leaving class:', error)
       toast.error('Failed to leave classroom', {
         description: error.response?.data?.message || 'Please try again.',
       })
+      // Revert optimistic update on error
+      mutateClassrooms()
     } finally {
       setIsLeavingClass(false)
     }
@@ -145,12 +153,32 @@ export default function StudentClassroomsPage() {
     router.push(`/student/classrooms/${classroomId}`)
   }
 
-  if (isLoading) {
+  if (isLoading || !classrooms) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen w-full bg-background pb-24">
+        {/* Header */}
+        <div className="relative bg-linear-to-br from-primary/20 via-primary/10 to-accent/20 pt-10 pb-14">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--tw-gradient-stops))] from-primary/30 via-transparent to-transparent" />
+          <div className="container max-w-6xl mx-auto px-4 relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="h-7 w-7 text-primary" />
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    My Classes
+                  </h1>
+                </div>
+                <p className="text-muted-foreground">
+                  Manage your enrolled classes
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content with Skeleton */}
+        <div className="container max-w-6xl mx-auto px-4 -mt-6 relative z-10">
+          <ClassroomCardSkeletonGrid count={6} />
         </div>
       </div>
     )
