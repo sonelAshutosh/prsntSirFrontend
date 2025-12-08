@@ -320,6 +320,11 @@ export const classroomAPI = {
         enrollmentStatus?: 'ACTIVE' | 'LEFT'
         joinedAt: string
         leftAt?: string | null
+        attendanceStats?: {
+          totalSessions: number
+          presentCount: number
+          attendancePercentage: number
+        }
       }>
     }
   }> => {

@@ -23,6 +23,11 @@ interface Student {
   enrollmentStatus?: 'ACTIVE' | 'LEFT'
   joinedAt: string
   leftAt?: string | null
+  attendanceStats?: {
+    totalSessions: number
+    presentCount: number
+    attendancePercentage: number
+  }
 }
 
 interface Classroom {
@@ -43,6 +48,9 @@ export default function StudentListPage() {
   const [statusFilter, setStatusFilter] = useState<'active' | 'left' | 'all'>(
     'active'
   )
+  const [attendanceFilter, setAttendanceFilter] = useState<
+    'all' | 'high' | 'low'
+  >('all')
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -124,6 +132,33 @@ export default function StudentListPage() {
     })
   }
 
+  // Filter students based on attendance percentage
+  const getFilteredStudents = () => {
+    if (attendanceFilter === 'all') {
+      return students
+    }
+
+    return students.filter((student) => {
+      // If student has no attendance stats, don't show them in percentage filters
+      if (
+        !student.attendanceStats ||
+        student.attendanceStats.totalSessions === 0
+      ) {
+        return false
+      }
+
+      const percentage = student.attendanceStats.attendancePercentage
+
+      if (attendanceFilter === 'high') {
+        return percentage >= 75
+      } else if (attendanceFilter === 'low') {
+        return percentage < 75
+      }
+
+      return true
+    })
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -172,7 +207,12 @@ export default function StudentListPage() {
         <Card className="border-2 shadow-xl">
           <CardHeader>
             <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <span>Enrolled Students ({students.length})</span>
+              <span>
+                Enrolled Students ({getFilteredStudents().length}
+                {getFilteredStudents().length !== students.length &&
+                  ` of ${students.length}`}
+                )
+              </span>
               <div className="flex gap-2">
                 <Button
                   variant={statusFilter === 'active' ? 'default' : 'outline'}
@@ -197,21 +237,66 @@ export default function StudentListPage() {
                 </Button>
               </div>
             </CardTitle>
+            {/* Attendance Filter Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4">
+              <span className="text-sm font-normal text-muted-foreground">
+                Filter by Attendance:
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant={attendanceFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAttendanceFilter('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={attendanceFilter === 'high' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAttendanceFilter('high')}
+                  className={
+                    attendanceFilter === 'high'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : ''
+                  }
+                >
+                  ≥75%
+                </Button>
+                <Button
+                  variant={attendanceFilter === 'low' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAttendanceFilter('low')}
+                  className={
+                    attendanceFilter === 'low'
+                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                      : ''
+                  }
+                >
+                  &lt;75%
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {students.length === 0 ? (
+            {getFilteredStudents().length === 0 ? (
               <div className="text-center py-12">
                 <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No students yet</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  {students.length === 0
+                    ? 'No students yet'
+                    : 'No students match the filters'}
+                </h3>
                 <p className="text-muted-foreground">
-                  Students will appear here once they join using the class code
+                  {students.length === 0
+                    ? 'Students will appear here once they join using the class code'
+                    : 'Try adjusting the filters to see more students'}
                 </p>
               </div>
             ) : (
               <div className="space-y-0">
-                {students.map((student, index) => (
+                {getFilteredStudents().map((student, index) => (
                   <div key={student.studentId}>
                     {/* Row */}
                     <div className="flex items-center gap-4 py-3">
@@ -255,6 +340,51 @@ export default function StudentListPage() {
                               ` • Left: ${formatDate(student.leftAt)}`}
                           </span>
                         </div>
+                        {/* Attendance Stats */}
+                        {student.attendanceStats &&
+                          student.attendanceStats.totalSessions > 0 && (
+                            <div className="mt-3 space-y-1.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">
+                                  Attendance:{' '}
+                                  {student.attendanceStats.presentCount}/
+                                  {student.attendanceStats.totalSessions}{' '}
+                                  sessions
+                                </span>
+                                <span
+                                  className={`font-semibold ${
+                                    student.attendanceStats
+                                      .attendancePercentage >= 75
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : student.attendanceStats
+                                          .attendancePercentage >= 50
+                                      ? 'text-yellow-600 dark:text-yellow-400'
+                                      : 'text-red-600 dark:text-red-400'
+                                  }`}
+                                >
+                                  {student.attendanceStats.attendancePercentage}
+                                  %
+                                </span>
+                              </div>
+                              {/* Progress Bar */}
+                              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full transition-all rounded-full ${
+                                    student.attendanceStats
+                                      .attendancePercentage >= 75
+                                      ? 'bg-green-500'
+                                      : student.attendanceStats
+                                          .attendancePercentage >= 50
+                                      ? 'bg-yellow-500'
+                                      : 'bg-red-500'
+                                  }`}
+                                  style={{
+                                    width: `${student.attendanceStats.attendancePercentage}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                       </div>
                     </div>
 
